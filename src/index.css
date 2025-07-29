@@ -1,0 +1,217 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+  
+  body {
+    margin: 0;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+      'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+      sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+@layer components {
+  .component-card {
+    @apply bg-white border border-gray-200 rounded-lg p-4 shadow-md hover:shadow-lg transition-all duration-200 cursor-move;
+  }
+  
+  .component-card:hover {
+    @apply border-blue-300 transform scale-105;
+  }
+  
+  .canvas-grid {
+    background-image: 
+      linear-gradient(rgba(0, 0, 0, 0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0, 0, 0, 0.03) 1px, transparent 1px);
+    background-size: 25px 25px;
+    background-color: #fafbfc;
+  }
+  
+  .connection-line {
+    stroke: #3b82f6;
+    stroke-width: 2;
+    fill: none;
+    marker-end: url(#arrowhead);
+  }
+  
+  .sidebar-section {
+    @apply mb-6;
+  }
+  
+  .sidebar-title {
+    @apply text-sm font-semibold text-gray-700 mb-3 px-3 bg-gray-50 p-3 rounded-lg border border-gray-100;
+  }
+  
+  .tech-item {
+    @apply bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 cursor-move;
+    backdrop-filter: blur(10px);
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.9));
+    will-change: transform;
+  }
+  
+  .tech-item:hover {
+    @apply border-blue-300 transform scale-105;
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.05), rgba(59, 130, 246, 0.1));
+  }
+  
+  .tech-item:active {
+    @apply transform scale-95;
+  }
+  
+  .canvas-component {
+    @apply absolute bg-white border border-gray-200 rounded-lg p-4 shadow-md cursor-pointer;
+    min-width: 140px;
+    min-height: 100px;
+    user-select: none;
+    backdrop-filter: blur(10px);
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.9));
+    will-change: transform;
+    transform: translateZ(0); /* Force hardware acceleration */
+    /* Performance optimizations for smoother dragging */
+    contain: layout style paint;
+    backface-visibility: hidden;
+    perspective: 1000px;
+    /* Optimize for GPU acceleration */
+    transform-style: preserve-3d;
+  }
+  
+  .canvas-component.selected {
+    @apply border-blue-500 shadow-lg;
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.05), rgba(59, 130, 246, 0.1));
+  }
+  
+  .canvas-component:hover {
+    @apply border-blue-400 shadow-lg;
+    transform: translateY(-2px) translateZ(0);
+  }
+  
+  .canvas-component:active {
+    @apply transform scale-95;
+  }
+  
+  .canvas-component.resizing {
+    @apply border-blue-600 shadow-xl;
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(59, 130, 246, 0.15));
+  }
+  
+  /* Enhanced drag states - optimized for performance */
+  .tech-item[data-dragging="true"] {
+    @apply shadow-2xl scale-105 rotate-2;
+    /* Performance optimizations for dragging */
+    will-change: transform;
+    transform: translateZ(0) scale(1.05) rotate(2deg);
+    backface-visibility: hidden;
+    contain: layout style paint;
+  }
+  
+  .canvas-component[data-dragging="true"] {
+    @apply shadow-2xl scale-105 rotate-1;
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(59, 130, 246, 0.15));
+    transform: translateZ(0);
+  }
+  
+  /* Drop zone enhancements */
+  .drop-zone-active {
+    @apply bg-blue-50 border-blue-300;
+    background-image: 
+      linear-gradient(rgba(59, 130, 246, 0.1) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(59, 130, 246, 0.1) 1px, transparent 1px);
+  }
+  
+  /* Connection mode enhancements */
+  .connection-mode-active {
+    @apply ring-2 ring-blue-400;
+    animation: pulse 2s infinite;
+  }
+  
+  @keyframes pulse {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.7;
+    }
+  }
+  
+  /* Grid snap indicators - optimized */
+  .grid-snap-line {
+    @apply bg-blue-400 opacity-30;
+    animation: fadeInOut 1s ease-in-out;
+    will-change: opacity;
+  }
+  
+  @keyframes fadeInOut {
+    0%, 100% {
+      opacity: 0.3;
+    }
+    50% {
+      opacity: 0.6;
+    }
+  }
+  
+  /* Performance optimizations */
+  .drag-overlay {
+    will-change: transform;
+    transform: translateZ(0);
+    pointer-events: none;
+  }
+  
+  /* Reduce expensive operations during drag */
+  .canvas-component.dragging {
+    transition: none !important;
+    backdrop-filter: none;
+  }
+  
+  .tech-item.dragging {
+    transition: none !important;
+    backdrop-filter: none;
+  }
+  
+  /* Resize handle enhancements */
+  .resize-handle {
+    will-change: transform, opacity;
+    transform: translateZ(0);
+  }
+  
+  .resize-handle:hover {
+    transform: scale(1.1) translateZ(0);
+  }
+  
+  /* Resize cursor states */
+  .resize-handle:active {
+    transform: scale(1.05) translateZ(0);
+  }
+  
+  /* Resizable panel styles */
+  .resizable-panel {
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+  }
+  
+  /* Prevent text selection during resize */
+  .resizing {
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    cursor: col-resize !important;
+  }
+  
+  /* Resize handle visual feedback */
+  .resize-handle-dots {
+    transition: opacity 0.2s ease-in-out;
+  }
+  
+  .resize-handle-dots:hover {
+    opacity: 1 !important;
+  }
+} 
