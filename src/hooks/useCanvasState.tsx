@@ -16,13 +16,12 @@ export const useCanvasState = () => {
   }, []);
 
   const updateComponent = useCallback((id: string, updates: Partial<CanvasComponent>) => {
-    console.log('Updating component:', id, updates);
-    setComponents(prev => 
-      prev.map(comp => {
+    setComponents(prev => {
+      const updated = prev.map(comp => {
         if (comp.id === id) {
           // Handle properties update specially to merge them properly
           if (updates.properties) {
-            return {
+            const updatedComp = {
               ...comp,
               ...updates,
               properties: {
@@ -30,13 +29,36 @@ export const useCanvasState = () => {
                 ...updates.properties
               }
             };
+            return updatedComp;
           }
           // For non-properties updates (like position), just spread the updates
-          return { ...comp, ...updates };
+          const updatedComp = { ...comp, ...updates };
+          return updatedComp;
         }
         return comp;
-      })
-    );
+      });
+      return updated;
+    });
+    
+    // Also update the selected component if it's the one being updated
+    setSelectedComponent(prev => {
+      if (prev && prev.id === id) {
+        if (updates.properties) {
+          const updatedSelected = {
+            ...prev,
+            ...updates,
+            properties: {
+              ...prev.properties,
+              ...updates.properties
+            }
+          };
+          return updatedSelected;
+        }
+        const updatedSelected = { ...prev, ...updates };
+        return updatedSelected;
+      }
+      return prev;
+    });
   }, []);
 
   const removeComponent = useCallback((id: string) => {

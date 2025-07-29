@@ -154,6 +154,43 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, mode = 'signin', onClose,
             )}
           </button>
         </form>
+        {/* Social sign-in options */}
+        <div className="mt-6">
+          <div className="flex items-center mb-4">
+            <div className="flex-grow border-t border-gray-200"></div>
+            <span className="mx-3 text-gray-400 text-xs">or continue with</span>
+            <div className="flex-grow border-t border-gray-200"></div>
+          </div>
+          <div className="flex space-x-3 justify-center">
+            <button
+              type="button"
+              onClick={() => alert('Google sign-in coming soon!')}
+              className="flex items-center px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              aria-label="Sign in with Google"
+            >
+              <svg className="w-5 h-5 mr-2" viewBox="0 0 48 48"><g><path fill="#4285F4" d="M24 9.5c3.54 0 6.7 1.22 9.19 3.22l6.85-6.85C35.82 2.7 30.28 0 24 0 14.82 0 6.73 5.4 2.69 13.32l7.98 6.2C12.13 13.09 17.62 9.5 24 9.5z"/><path fill="#34A853" d="M46.1 24.5c0-1.64-.15-3.22-.42-4.74H24v9.01h12.42c-.54 2.9-2.18 5.36-4.65 7.01l7.18 5.59C43.98 37.13 46.1 31.3 46.1 24.5z"/><path fill="#FBBC05" d="M10.67 28.52c-1.13-3.36-1.13-6.98 0-10.34l-7.98-6.2C.7 16.18 0 19.01 0 22c0 2.99.7 5.82 1.97 8.02l8.7-6.5z"/><path fill="#EA4335" d="M24 44c6.28 0 11.56-2.08 15.41-5.67l-7.18-5.59c-2.01 1.35-4.6 2.16-8.23 2.16-6.38 0-11.87-3.59-14.33-8.72l-8.7 6.5C6.73 42.6 14.82 48 24 48z"/></g></svg>
+              <span className="text-sm font-medium text-gray-700">Google</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => alert('Apple sign-in coming soon!')}
+              className="flex items-center px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              aria-label="Sign in with Apple"
+            >
+              <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24"><path fill="currentColor" d="M16.365 1.43c0 1.14-.93 2.07-2.07 2.07-.04 0-.08 0-.12-.01-.02-.04-.03-.09-.03-.13 0-1.13.93-2.06 2.07-2.06.04 0 .08 0 .12.01.02.04.03.09.03.12zm3.13 4.13c-1.7-1.62-4.36-1.36-5.5-1.36-1.13 0-3.13-.26-5.16 1.36C5.13 7.13 4 10.13 4 13.13c0 3.13 2.13 6.13 5.13 6.13 1.13 0 1.57-.74 3.13-.74 1.56 0 2 .74 3.13.74 3 0 5.13-3 5.13-6.13 0-3-1.13-6-3.87-7.57z"/></svg>
+              <span className="text-sm font-medium text-gray-700">Apple</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => alert('GitHub sign-in coming soon!')}
+              className="flex items-center px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              aria-label="Sign in with GitHub"
+            >
+              <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2C6.48 2 2 6.58 2 12.26c0 4.49 2.87 8.3 6.84 9.64.5.09.68-.22.68-.48 0-.24-.01-.87-.01-1.7-2.78.62-3.37-1.36-3.37-1.36-.45-1.18-1.11-1.5-1.11-1.5-.91-.64.07-.63.07-.63 1.01.07 1.54 1.06 1.54 1.06.89 1.56 2.34 1.11 2.91.85.09-.66.35-1.11.63-1.37-2.22-.26-4.56-1.14-4.56-5.07 0-1.12.39-2.03 1.03-2.75-.1-.26-.45-1.3.1-2.7 0 0 .84-.28 2.75 1.05A9.38 9.38 0 0 1 12 6.84c.85.004 1.71.12 2.51.35 1.91-1.33 2.75-1.05 2.75-1.05.55 1.4.2 2.44.1 2.7.64.72 1.03 1.63 1.03 2.75 0 3.94-2.34 4.81-4.57 5.07.36.32.68.94.68 1.9 0 1.37-.01 2.47-.01 2.81 0 .27.18.58.69.48A10.01 10.01 0 0 0 22 12.26C22 6.58 17.52 2 12 2z"/></svg>
+              <span className="text-sm font-medium text-gray-700">GitHub</span>
+            </button>
+          </div>
+        </div>
         <div className="mt-6 text-center">
           <p className="text-gray-600">
             {authMode === 'signup' ? 'Already have an account?' : "Don't have an account?"}

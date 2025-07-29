@@ -304,10 +304,8 @@ const PropertiesPanel = ({
   // Handle library selection
   const handleLibraryToggle = (libraryId: string) => {
     if (!currentComponent) return;
-    
     const currentSelected = selectedLibraries[currentComponent.id] || [];
     const isSelected = currentSelected.some(lib => lib.id === libraryId);
-    
     let newSelected: any[] = [];
     if (isSelected) {
       newSelected = currentSelected.filter(lib => lib.id !== libraryId);
@@ -317,14 +315,14 @@ const PropertiesPanel = ({
         newSelected = [...currentSelected, library];
       }
     }
-    
     setSelectedLibraries(prev => ({
       ...prev,
       [currentComponent.id]: newSelected
     }));
-    
-    // Update component with selected libraries
-    handlePropertyChange('selectedLibraries', newSelected);
+    // Persist selected libraries on the component itself
+    if (onComponentUpdate) {
+      onComponentUpdate(currentComponent.id, { selectedLibraries: newSelected });
+    }
   };
 
   // Get project data for the selected component
@@ -375,12 +373,18 @@ const PropertiesPanel = ({
 
   const handlePropertyChange = (property: string, value: any) => {
     if (currentComponent && onComponentUpdate) {
-      // Update the properties object instead of the component directly
-      const updatedProperties = {
-        ...currentComponent.properties,
-        [property]: value
-      };
-      onComponentUpdate(currentComponent.id, { properties: updatedProperties });
+      if (property === 'selectedLibraries') {
+        // Update selectedLibraries directly on the component
+        onComponentUpdate(currentComponent.id, { selectedLibraries: value });
+      } else {
+        // Ensure properties object exists and update it
+        const currentProperties = currentComponent.properties || {};
+        const updatedProperties = {
+          ...currentProperties,
+          [property]: value
+        };
+        onComponentUpdate(currentComponent.id, { properties: updatedProperties });
+      }
     }
   };
 
@@ -388,6 +392,7 @@ const PropertiesPanel = ({
 
   const renderTechnologyInfo = () => {
     if (!currentTech || !currentCategory) return null;
+
 
     const selectedLibs = selectedLibraries[currentComponent?.id || ''] || [];
 
@@ -410,7 +415,6 @@ const PropertiesPanel = ({
               <label className="text-xs font-medium text-gray-700 block mb-1">Component Name</label>
               <input
                 type="text"
-                key={currentComponent?.id + '-name'}
                 value={currentComponent?.properties?.name || ''}
                 onChange={(e) => {
                   const newValue = e.target.value;
@@ -424,9 +428,11 @@ const PropertiesPanel = ({
             <div>
               <label className="text-xs font-medium text-gray-700 block mb-1">Description</label>
               <textarea
-                key={currentComponent?.id + '-description'}
                 value={currentComponent?.properties?.description || ''}
-                onChange={(e) => handlePropertyChange('description', e.target.value)}
+                onChange={(e) => {
+                  const newValue = e.target.value;
+                  handlePropertyChange('description', newValue);
+                }}
                 className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                 rows={2}
                 placeholder="Describe what this component does..."
@@ -632,6 +638,915 @@ const PropertiesPanel = ({
     );
   };
 
+  // React-specific configuration section
+  const renderReactConfiguration = () => {
+    if (!currentComponent || currentComponent.techId !== 'react') return null;
+
+    // Get React configuration summary
+    const getReactConfigSummary = () => {
+      const config = currentComponent.properties || {};
+      const summary = {
+        buildTool: config.buildTool || 'vite',
+        language: config.language || 'javascript',
+        cssFramework: config.cssFramework || 'tailwind',
+        routing: config.routing || 'react-router',
+        stateManagement: config.stateManagement || 'context',
+        testingFramework: config.testingFramework || 'jest',
+        features: [] as string[]
+      };
+
+      if (config.pwa) summary.features.push('PWA Support');
+      if (config.i18n) summary.features.push('Internationalization');
+      if (config.storybook) summary.features.push('Storybook');
+      if (config.eslint) summary.features.push('ESLint');
+      if (config.prettier) summary.features.push('Prettier');
+      if (config.husky) summary.features.push('Git Hooks');
+
+      return summary;
+    };
+
+    const configSummary = getReactConfigSummary();
+
+    return (
+      <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4">
+        <h3 className="font-semibold text-blue-900 mb-4 flex items-center">
+          <Settings className="w-4 h-4 mr-2" />
+          React Configuration
+        </h3>
+
+        {/* Quick Presets */}
+        <div className="mb-4 p-3 bg-blue-100 rounded-lg">
+          <h4 className="text-sm font-medium text-blue-800 mb-2">Quick Presets</h4>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              onClick={() => {
+                handlePropertyChange('buildTool', 'vite');
+                handlePropertyChange('language', 'typescript');
+                handlePropertyChange('cssFramework', 'tailwind');
+                handlePropertyChange('routing', 'react-router');
+                handlePropertyChange('stateManagement', 'context');
+                handlePropertyChange('testingFramework', 'vitest');
+                handlePropertyChange('eslint', true);
+                handlePropertyChange('prettier', true);
+              }}
+              className="text-xs bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700 transition-colors"
+            >
+              Modern React (Vite + TS + Tailwind)
+            </button>
+            <button
+              onClick={() => {
+                handlePropertyChange('buildTool', 'nextjs');
+                handlePropertyChange('language', 'typescript');
+                handlePropertyChange('cssFramework', 'tailwind');
+                handlePropertyChange('routing', 'nextjs-routing');
+                handlePropertyChange('stateManagement', 'context');
+                handlePropertyChange('testingFramework', 'jest');
+                handlePropertyChange('eslint', true);
+                handlePropertyChange('prettier', true);
+              }}
+              className="text-xs bg-green-600 text-white px-2 py-1 rounded hover:bg-green-700 transition-colors"
+            >
+              Next.js Full Stack
+            </button>
+            <button
+              onClick={() => {
+                handlePropertyChange('buildTool', 'create-react-app');
+                handlePropertyChange('language', 'javascript');
+                handlePropertyChange('cssFramework', 'bootstrap');
+                handlePropertyChange('routing', 'react-router');
+                handlePropertyChange('stateManagement', 'redux');
+                handlePropertyChange('testingFramework', 'jest');
+                handlePropertyChange('eslint', true);
+              }}
+              className="text-xs bg-purple-600 text-white px-2 py-1 rounded hover:bg-purple-700 transition-colors"
+            >
+              Classic React (CRA + Redux)
+            </button>
+            <button
+              onClick={() => {
+                handlePropertyChange('buildTool', 'vite');
+                handlePropertyChange('language', 'typescript');
+                handlePropertyChange('cssFramework', 'styled-components');
+                handlePropertyChange('routing', 'react-router');
+                handlePropertyChange('stateManagement', 'zustand');
+                handlePropertyChange('testingFramework', 'vitest');
+                handlePropertyChange('eslint', true);
+                handlePropertyChange('prettier', true);
+                handlePropertyChange('storybook', true);
+              }}
+              className="text-xs bg-orange-600 text-white px-2 py-1 rounded hover:bg-orange-700 transition-colors"
+            >
+              Developer Experience
+            </button>
+          </div>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Build System */}
+          <div className="space-y-3">
+            <h4 className="text-sm font-medium text-blue-800">Build System</h4>
+            
+            <div>
+              <label className="text-xs font-medium text-blue-700 block mb-1">Build Tool</label>
+              <select
+                value={currentComponent.properties?.buildTool || 'vite'}
+                onChange={(e) => handlePropertyChange('buildTool', e.target.value)}
+                className="w-full px-3 py-2 border border-blue-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+              >
+                <option value="vite">Vite (Recommended)</option>
+                <option value="create-react-app">Create React App</option>
+                <option value="nextjs">Next.js</option>
+                <option value="webpack">Webpack</option>
+                <option value="parcel">Parcel</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="text-xs font-medium text-blue-700 block mb-1">Language</label>
+              <select
+                value={currentComponent.properties?.language || 'javascript'}
+                onChange={(e) => handlePropertyChange('language', e.target.value)}
+                className="w-full px-3 py-2 border border-blue-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+              >
+                <option value="javascript">JavaScript</option>
+                <option value="typescript">TypeScript</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="text-xs font-medium text-blue-700 block mb-1">CSS Framework</label>
+              <select
+                value={currentComponent.properties?.cssFramework || 'tailwind'}
+                onChange={(e) => handlePropertyChange('cssFramework', e.target.value)}
+                className="w-full px-3 py-2 border border-blue-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+              >
+                <option value="tailwind">Tailwind CSS</option>
+                <option value="css-modules">CSS Modules</option>
+                <option value="styled-components">Styled Components</option>
+                <option value="emotion">Emotion</option>
+                <option value="bootstrap">Bootstrap</option>
+                <option value="material-ui">Material-UI</option>
+                <option value="chakra-ui">Chakra UI</option>
+                <option value="none">No CSS Framework</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Project Structure */}
+          <div className="space-y-3">
+            <h4 className="text-sm font-medium text-blue-800">Project Structure</h4>
+            
+            <div>
+              <label className="text-xs font-medium text-blue-700 block mb-1">Routing</label>
+              <select
+                value={currentComponent.properties?.routing || 'react-router'}
+                onChange={(e) => handlePropertyChange('routing', e.target.value)}
+                className="w-full px-3 py-2 border border-blue-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+              >
+                <option value="react-router">React Router</option>
+                <option value="nextjs-routing">Next.js Routing</option>
+                <option value="none">No Routing</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="text-xs font-medium text-blue-700 block mb-1">State Management</label>
+              <select
+                value={currentComponent.properties?.stateManagement || 'context'}
+                onChange={(e) => handlePropertyChange('stateManagement', e.target.value)}
+                className="w-full px-3 py-2 border border-blue-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+              >
+                <option value="context">React Context</option>
+                <option value="redux">Redux Toolkit</option>
+                <option value="zustand">Zustand</option>
+                <option value="recoil">Recoil</option>
+                <option value="jotai">Jotai</option>
+                <option value="none">No State Management</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="text-xs font-medium text-blue-700 block mb-1">Testing Framework</label>
+              <select
+                value={currentComponent.properties?.testingFramework || 'jest'}
+                onChange={(e) => handlePropertyChange('testingFramework', e.target.value)}
+                className="w-full px-3 py-2 border border-blue-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+              >
+                <option value="jest">Jest + React Testing Library</option>
+                <option value="vitest">Vitest</option>
+                <option value="cypress">Cypress</option>
+                <option value="playwright">Playwright</option>
+                <option value="none">No Testing</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* Advanced Options */}
+        <div className="mt-4 pt-4 border-t border-blue-200">
+          <h4 className="text-sm font-medium text-blue-800 mb-3">Advanced Options</h4>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <label className="flex items-center space-x-2 text-xs">
+              <input
+                type="checkbox"
+                checked={currentComponent.properties?.pwa || false}
+                onChange={(e) => handlePropertyChange('pwa', e.target.checked)}
+                className="rounded border-blue-300 text-blue-600 focus:ring-blue-500"
+              />
+              <span className="text-blue-700">PWA Support</span>
+            </label>
+
+            <label className="flex items-center space-x-2 text-xs">
+              <input
+                type="checkbox"
+                checked={currentComponent.properties?.i18n || false}
+                onChange={(e) => handlePropertyChange('i18n', e.target.checked)}
+                className="rounded border-blue-300 text-blue-600 focus:ring-blue-500"
+              />
+              <span className="text-blue-700">Internationalization</span>
+            </label>
+
+            <label className="flex items-center space-x-2 text-xs">
+              <input
+                type="checkbox"
+                checked={currentComponent.properties?.storybook || false}
+                onChange={(e) => handlePropertyChange('storybook', e.target.checked)}
+                className="rounded border-blue-300 text-blue-600 focus:ring-blue-500"
+              />
+              <span className="text-blue-700">Storybook</span>
+            </label>
+
+            <label className="flex items-center space-x-2 text-xs">
+              <input
+                type="checkbox"
+                checked={currentComponent.properties?.eslint || false}
+                onChange={(e) => handlePropertyChange('eslint', e.target.checked)}
+                className="rounded border-blue-300 text-blue-600 focus:ring-blue-500"
+              />
+              <span className="text-blue-700">ESLint</span>
+            </label>
+
+            <label className="flex items-center space-x-2 text-xs">
+              <input
+                type="checkbox"
+                checked={currentComponent.properties?.prettier || false}
+                onChange={(e) => handlePropertyChange('prettier', e.target.checked)}
+                className="rounded border-blue-300 text-blue-600 focus:ring-blue-500"
+              />
+              <span className="text-blue-700">Prettier</span>
+            </label>
+
+            <label className="flex items-center space-x-2 text-xs">
+              <input
+                type="checkbox"
+                checked={currentComponent.properties?.husky || false}
+                onChange={(e) => handlePropertyChange('husky', e.target.checked)}
+                className="rounded border-blue-300 text-blue-600 focus:ring-blue-500"
+              />
+              <span className="text-blue-700">Git Hooks (Husky)</span>
+            </label>
+          </div>
+        </div>
+
+        {/* Environment Configuration */}
+        <div className="mt-4 pt-4 border-t border-blue-200">
+          <h4 className="text-sm font-medium text-blue-800 mb-3">Environment Configuration</h4>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-medium text-blue-700 block mb-1">Development Port</label>
+              <input
+                type="number"
+                value={currentComponent.properties?.devPort || 3000}
+                onChange={(e) => handlePropertyChange('devPort', parseInt(e.target.value))}
+                className="w-full px-3 py-2 border border-blue-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+                min="1024"
+                max="65535"
+              />
+            </div>
+
+            <div>
+              <label className="text-xs font-medium text-blue-700 block mb-1">Production Port</label>
+              <input
+                type="number"
+                value={currentComponent.properties?.prodPort || 3000}
+                onChange={(e) => handlePropertyChange('prodPort', parseInt(e.target.value))}
+                className="w-full px-3 py-2 border border-blue-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+                min="1024"
+                max="65535"
+              />
+            </div>
+          </div>
+
+          <div className="mt-3">
+            <label className="text-xs font-medium text-blue-700 block mb-1">API Base URL</label>
+            <input
+              type="text"
+              value={currentComponent.properties?.apiBaseUrl || 'http://localhost:5000'}
+              onChange={(e) => handlePropertyChange('apiBaseUrl', e.target.value)}
+              className="w-full px-3 py-2 border border-blue-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+              placeholder="http://localhost:5000"
+            />
+          </div>
+        </div>
+
+        {/* Code Quality */}
+        <div className="mt-4 pt-4 border-t border-blue-200">
+          <h4 className="text-sm font-medium text-blue-800 mb-3">Code Quality</h4>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-medium text-blue-700 block mb-1">Strict Mode</label>
+              <select
+                value={currentComponent.properties?.strictMode || 'enabled'}
+                onChange={(e) => handlePropertyChange('strictMode', e.target.value)}
+                className="w-full px-3 py-2 border border-blue-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+              >
+                <option value="enabled">Enabled</option>
+                <option value="disabled">Disabled</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="text-xs font-medium text-blue-700 block mb-1">Error Boundary</label>
+              <select
+                value={currentComponent.properties?.errorBoundary || 'enabled'}
+                onChange={(e) => handlePropertyChange('errorBoundary', e.target.value)}
+                className="w-full px-3 py-2 border border-blue-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+              >
+                <option value="enabled">Enabled</option>
+                <option value="disabled">Disabled</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* Configuration Summary */}
+        <div className="mt-4 pt-4 border-t border-blue-200">
+          <h4 className="text-sm font-medium text-blue-800 mb-3">Configuration Summary</h4>
+          
+          <div className="bg-white rounded-lg p-3 border border-blue-200">
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <div className="flex justify-between">
+                <span className="text-blue-600">Build Tool:</span>
+                <span className="font-medium">{configSummary.buildTool}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-blue-600">Language:</span>
+                <span className="font-medium">{configSummary.language}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-blue-600">CSS Framework:</span>
+                <span className="font-medium">{configSummary.cssFramework}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-blue-600">Routing:</span>
+                <span className="font-medium">{configSummary.routing}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-blue-600">State Management:</span>
+                <span className="font-medium">{configSummary.stateManagement}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-blue-600">Testing:</span>
+                <span className="font-medium">{configSummary.testingFramework}</span>
+              </div>
+            </div>
+            
+            {configSummary.features.length > 0 && (
+              <div className="mt-3 pt-3 border-t border-blue-100">
+                <div className="text-xs text-blue-600 mb-2">Additional Features:</div>
+                <div className="flex flex-wrap gap-1">
+                  {configSummary.features.map((feature, index) => (
+                    <span
+                      key={index}
+                      className="inline-block bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded"
+                    >
+                      {feature}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Spring Boot-specific configuration section
+  const renderSpringBootConfiguration = () => {
+    if (!currentComponent || currentComponent.techId !== 'spring') return null;
+
+    // Get Spring Boot configuration summary
+    const getSpringBootConfigSummary = () => {
+      const config = currentComponent.properties || {};
+      const summary = {
+        projectType: config.projectType || 'maven',
+        language: config.language || 'java',
+        packaging: config.packaging || 'jar',
+        javaVersion: config.javaVersion || '17',
+        springBootVersion: config.springBootVersion || '3.2.0',
+        groupId: config.groupId || 'com.example',
+        artifactId: config.artifactId || 'demo',
+        name: config.name || 'demo',
+        description: config.description || 'Demo project for Spring Boot',
+        packageName: config.packageName || 'com.example.demo',
+        features: [] as string[]
+      };
+
+      if (config.web) summary.features.push('Spring Web');
+      if (config.dataJpa) summary.features.push('Spring Data JPA');
+      if (config.dataMongodb) summary.features.push('Spring Data MongoDB');
+      if (config.dataRedis) summary.features.push('Spring Data Redis');
+      if (config.security) summary.features.push('Spring Security');
+      if (config.actuator) summary.features.push('Spring Boot Actuator');
+      if (config.devTools) summary.features.push('Spring Boot DevTools');
+      if (config.validation) summary.features.push('Validation');
+      if (config.cache) summary.features.push('Spring Cache');
+      if (config.messaging) summary.features.push('Spring Messaging');
+      if (config.cloud) summary.features.push('Spring Cloud');
+      if (config.testcontainers) summary.features.push('Testcontainers');
+
+      return summary;
+    };
+
+    const configSummary = getSpringBootConfigSummary();
+
+    return (
+      <div className="bg-gradient-to-br from-green-50 to-emerald-50 border border-green-200 rounded-lg p-4">
+        <h3 className="font-semibold text-green-900 mb-4 flex items-center">
+          <Settings className="w-4 h-4 mr-2" />
+          Spring Boot Configuration
+        </h3>
+
+        {/* Quick Presets */}
+        <div className="mb-4 p-3 bg-green-100 rounded-lg">
+          <h4 className="text-sm font-medium text-green-800 mb-2">Quick Presets</h4>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              onClick={() => {
+                handlePropertyChange('projectType', 'maven');
+                handlePropertyChange('language', 'java');
+                handlePropertyChange('packaging', 'jar');
+                handlePropertyChange('javaVersion', '17');
+                handlePropertyChange('springBootVersion', '3.2.0');
+                handlePropertyChange('web', true);
+                handlePropertyChange('dataJpa', true);
+                handlePropertyChange('h2', true);
+                handlePropertyChange('devTools', true);
+                handlePropertyChange('actuator', true);
+              }}
+              className="text-xs bg-green-600 text-white px-2 py-1 rounded hover:bg-green-700 transition-colors"
+            >
+              Web Application
+            </button>
+            <button
+              onClick={() => {
+                handlePropertyChange('projectType', 'maven');
+                handlePropertyChange('language', 'java');
+                handlePropertyChange('packaging', 'jar');
+                handlePropertyChange('javaVersion', '17');
+                handlePropertyChange('springBootVersion', '3.2.0');
+                handlePropertyChange('web', true);
+                handlePropertyChange('dataJpa', true);
+                handlePropertyChange('postgresql', true);
+                handlePropertyChange('security', true);
+                handlePropertyChange('actuator', true);
+                handlePropertyChange('validation', true);
+              }}
+              className="text-xs bg-blue-600 text-white px-2 py-1 rounded hover:bg-blue-700 transition-colors"
+            >
+              Secure REST API
+            </button>
+            <button
+              onClick={() => {
+                handlePropertyChange('projectType', 'maven');
+                handlePropertyChange('language', 'java');
+                handlePropertyChange('packaging', 'jar');
+                handlePropertyChange('javaVersion', '17');
+                handlePropertyChange('springBootVersion', '3.2.0');
+                handlePropertyChange('web', true);
+                handlePropertyChange('dataMongodb', true);
+                handlePropertyChange('cache', true);
+                handlePropertyChange('actuator', true);
+                handlePropertyChange('devTools', true);
+              }}
+              className="text-xs bg-purple-600 text-white px-2 py-1 rounded hover:bg-purple-700 transition-colors"
+            >
+              Microservice
+            </button>
+            <button
+              onClick={() => {
+                handlePropertyChange('projectType', 'maven');
+                handlePropertyChange('language', 'java');
+                handlePropertyChange('packaging', 'jar');
+                handlePropertyChange('javaVersion', '17');
+                handlePropertyChange('springBootVersion', '3.2.0');
+                handlePropertyChange('web', true);
+                handlePropertyChange('dataJpa', true);
+                handlePropertyChange('postgresql', true);
+                handlePropertyChange('security', true);
+                handlePropertyChange('actuator', true);
+                handlePropertyChange('validation', true);
+                handlePropertyChange('cache', true);
+                handlePropertyChange('messaging', true);
+                handlePropertyChange('cloud', true);
+              }}
+              className="text-xs bg-orange-600 text-white px-2 py-1 rounded hover:bg-orange-700 transition-colors"
+            >
+              Enterprise Application
+            </button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Project Metadata */}
+          <div className="space-y-3">
+            <h4 className="text-sm font-medium text-green-800">Project Metadata</h4>
+            
+            <div>
+              <label className="text-xs font-medium text-green-700 block mb-1">Project Type</label>
+              <select
+                value={currentComponent.properties?.projectType || 'maven'}
+                onChange={(e) => handlePropertyChange('projectType', e.target.value)}
+                className="w-full px-3 py-2 border border-green-300 rounded-md text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white"
+              >
+                <option value="maven">Maven</option>
+                <option value="gradle">Gradle</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="text-xs font-medium text-green-700 block mb-1">Language</label>
+              <select
+                value={currentComponent.properties?.language || 'java'}
+                onChange={(e) => handlePropertyChange('language', e.target.value)}
+                className="w-full px-3 py-2 border border-green-300 rounded-md text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white"
+              >
+                <option value="java">Java</option>
+                <option value="kotlin">Kotlin</option>
+                <option value="groovy">Groovy</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="text-xs font-medium text-green-700 block mb-1">Packaging</label>
+              <select
+                value={currentComponent.properties?.packaging || 'jar'}
+                onChange={(e) => handlePropertyChange('packaging', e.target.value)}
+                className="w-full px-3 py-2 border border-green-300 rounded-md text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white"
+              >
+                <option value="jar">JAR</option>
+                <option value="war">WAR</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="text-xs font-medium text-green-700 block mb-1">Java Version</label>
+              <select
+                value={currentComponent.properties?.javaVersion || '17'}
+                onChange={(e) => handlePropertyChange('javaVersion', e.target.value)}
+                className="w-full px-3 py-2 border border-green-300 rounded-md text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white"
+              >
+                <option value="8">Java 8</option>
+                <option value="11">Java 11</option>
+                <option value="17">Java 17</option>
+                <option value="21">Java 21</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="text-xs font-medium text-green-700 block mb-1">Spring Boot Version</label>
+              <select
+                value={currentComponent.properties?.springBootVersion || '3.2.0'}
+                onChange={(e) => handlePropertyChange('springBootVersion', e.target.value)}
+                className="w-full px-3 py-2 border border-green-300 rounded-md text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white"
+              >
+                <option value="3.2.0">3.2.0 (Latest)</option>
+                <option value="3.1.0">3.1.0</option>
+                <option value="2.7.0">2.7.0</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Project Coordinates */}
+          <div className="space-y-3">
+            <h4 className="text-sm font-medium text-green-800">Project Coordinates</h4>
+            
+            <div>
+              <label className="text-xs font-medium text-green-700 block mb-1">Group ID</label>
+              <input
+                type="text"
+                value={currentComponent.properties?.groupId || 'com.example'}
+                onChange={(e) => handlePropertyChange('groupId', e.target.value)}
+                className="w-full px-3 py-2 border border-green-300 rounded-md text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white"
+                placeholder="com.example"
+              />
+            </div>
+
+            <div>
+              <label className="text-xs font-medium text-green-700 block mb-1">Artifact ID</label>
+              <input
+                type="text"
+                value={currentComponent.properties?.artifactId || 'demo'}
+                onChange={(e) => handlePropertyChange('artifactId', e.target.value)}
+                className="w-full px-3 py-2 border border-green-300 rounded-md text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white"
+                placeholder="demo"
+              />
+            </div>
+
+            <div>
+              <label className="text-xs font-medium text-green-700 block mb-1">Name</label>
+              <input
+                type="text"
+                value={currentComponent.properties?.name || 'demo'}
+                onChange={(e) => handlePropertyChange('name', e.target.value)}
+                className="w-full px-3 py-2 border border-green-300 rounded-md text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white"
+                placeholder="demo"
+              />
+            </div>
+
+            <div>
+              <label className="text-xs font-medium text-green-700 block mb-1">Description</label>
+              <input
+                type="text"
+                value={currentComponent.properties?.description || 'Demo project for Spring Boot'}
+                onChange={(e) => handlePropertyChange('description', e.target.value)}
+                className="w-full px-3 py-2 border border-green-300 rounded-md text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white"
+                placeholder="Demo project for Spring Boot"
+              />
+            </div>
+
+            <div>
+              <label className="text-xs font-medium text-green-700 block mb-1">Package Name</label>
+              <input
+                type="text"
+                value={currentComponent.properties?.packageName || 'com.example.demo'}
+                onChange={(e) => handlePropertyChange('packageName', e.target.value)}
+                className="w-full px-3 py-2 border border-green-300 rounded-md text-sm focus:ring-2 focus:ring-green-500 focus:border-transparent bg-white"
+                placeholder="com.example.demo"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Dependencies */}
+        <div className="mt-4 pt-4 border-t border-green-200">
+          <h4 className="text-sm font-medium text-green-800 mb-3">Dependencies</h4>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <label className="flex items-center space-x-2 text-xs">
+              <input
+                type="checkbox"
+                checked={currentComponent.properties?.web || false}
+                onChange={(e) => handlePropertyChange('web', e.target.checked)}
+                className="rounded border-green-300 text-green-600 focus:ring-green-500"
+              />
+              <span className="text-green-700">Spring Web</span>
+            </label>
+
+            <label className="flex items-center space-x-2 text-xs">
+              <input
+                type="checkbox"
+                checked={currentComponent.properties?.dataJpa || false}
+                onChange={(e) => handlePropertyChange('dataJpa', e.target.checked)}
+                className="rounded border-green-300 text-green-600 focus:ring-green-500"
+              />
+              <span className="text-green-700">Spring Data JPA</span>
+            </label>
+
+            <label className="flex items-center space-x-2 text-xs">
+              <input
+                type="checkbox"
+                checked={currentComponent.properties?.dataMongodb || false}
+                onChange={(e) => handlePropertyChange('dataMongodb', e.target.checked)}
+                className="rounded border-green-300 text-green-600 focus:ring-green-500"
+              />
+              <span className="text-green-700">Spring Data MongoDB</span>
+            </label>
+
+            <label className="flex items-center space-x-2 text-xs">
+              <input
+                type="checkbox"
+                checked={currentComponent.properties?.dataRedis || false}
+                onChange={(e) => handlePropertyChange('dataRedis', e.target.checked)}
+                className="rounded border-green-300 text-green-600 focus:ring-green-500"
+              />
+              <span className="text-green-700">Spring Data Redis</span>
+            </label>
+
+            <label className="flex items-center space-x-2 text-xs">
+              <input
+                type="checkbox"
+                checked={currentComponent.properties?.security || false}
+                onChange={(e) => handlePropertyChange('security', e.target.checked)}
+                className="rounded border-green-300 text-green-600 focus:ring-green-500"
+              />
+              <span className="text-green-700">Spring Security</span>
+            </label>
+
+            <label className="flex items-center space-x-2 text-xs">
+              <input
+                type="checkbox"
+                checked={currentComponent.properties?.actuator || false}
+                onChange={(e) => handlePropertyChange('actuator', e.target.checked)}
+                className="rounded border-green-300 text-green-600 focus:ring-green-500"
+              />
+              <span className="text-green-700">Spring Boot Actuator</span>
+            </label>
+
+            <label className="flex items-center space-x-2 text-xs">
+              <input
+                type="checkbox"
+                checked={currentComponent.properties?.devTools || false}
+                onChange={(e) => handlePropertyChange('devTools', e.target.checked)}
+                className="rounded border-green-300 text-green-600 focus:ring-green-500"
+              />
+              <span className="text-green-700">Spring Boot DevTools</span>
+            </label>
+
+            <label className="flex items-center space-x-2 text-xs">
+              <input
+                type="checkbox"
+                checked={currentComponent.properties?.validation || false}
+                onChange={(e) => handlePropertyChange('validation', e.target.checked)}
+                className="rounded border-green-300 text-green-600 focus:ring-green-500"
+              />
+              <span className="text-green-700">Validation</span>
+            </label>
+
+            <label className="flex items-center space-x-2 text-xs">
+              <input
+                type="checkbox"
+                checked={currentComponent.properties?.cache || false}
+                onChange={(e) => handlePropertyChange('cache', e.target.checked)}
+                className="rounded border-green-300 text-green-600 focus:ring-green-500"
+              />
+              <span className="text-green-700">Spring Cache</span>
+            </label>
+
+            <label className="flex items-center space-x-2 text-xs">
+              <input
+                type="checkbox"
+                checked={currentComponent.properties?.messaging || false}
+                onChange={(e) => handlePropertyChange('messaging', e.target.checked)}
+                className="rounded border-green-300 text-green-600 focus:ring-green-500"
+              />
+              <span className="text-green-700">Spring Messaging</span>
+            </label>
+
+            <label className="flex items-center space-x-2 text-xs">
+              <input
+                type="checkbox"
+                checked={currentComponent.properties?.cloud || false}
+                onChange={(e) => handlePropertyChange('cloud', e.target.checked)}
+                className="rounded border-green-300 text-green-600 focus:ring-green-500"
+              />
+              <span className="text-green-700">Spring Cloud</span>
+            </label>
+
+            <label className="flex items-center space-x-2 text-xs">
+              <input
+                type="checkbox"
+                checked={currentComponent.properties?.testcontainers || false}
+                onChange={(e) => handlePropertyChange('testcontainers', e.target.checked)}
+                className="rounded border-green-300 text-green-600 focus:ring-green-500"
+              />
+              <span className="text-green-700">Testcontainers</span>
+            </label>
+          </div>
+        </div>
+
+        {/* Database */}
+        <div className="mt-4 pt-4 border-t border-green-200">
+          <h4 className="text-sm font-medium text-green-800 mb-3">Database</h4>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <label className="flex items-center space-x-2 text-xs">
+              <input
+                type="checkbox"
+                checked={currentComponent.properties?.h2 || false}
+                onChange={(e) => handlePropertyChange('h2', e.target.checked)}
+                className="rounded border-green-300 text-green-600 focus:ring-green-500"
+              />
+              <span className="text-green-700">H2 Database</span>
+            </label>
+
+            <label className="flex items-center space-x-2 text-xs">
+              <input
+                type="checkbox"
+                checked={currentComponent.properties?.postgresql || false}
+                onChange={(e) => handlePropertyChange('postgresql', e.target.checked)}
+                className="rounded border-green-300 text-green-600 focus:ring-green-500"
+              />
+              <span className="text-green-700">PostgreSQL</span>
+            </label>
+
+            <label className="flex items-center space-x-2 text-xs">
+              <input
+                type="checkbox"
+                checked={currentComponent.properties?.mysql || false}
+                onChange={(e) => handlePropertyChange('mysql', e.target.checked)}
+                className="rounded border-green-300 text-green-600 focus:ring-green-500"
+              />
+              <span className="text-green-700">MySQL</span>
+            </label>
+
+            <label className="flex items-center space-x-2 text-xs">
+              <input
+                type="checkbox"
+                checked={currentComponent.properties?.mariadb || false}
+                onChange={(e) => handlePropertyChange('mariadb', e.target.checked)}
+                className="rounded border-green-300 text-green-600 focus:ring-green-500"
+              />
+              <span className="text-green-700">MariaDB</span>
+            </label>
+
+            <label className="flex items-center space-x-2 text-xs">
+              <input
+                type="checkbox"
+                checked={currentComponent.properties?.mongodb || false}
+                onChange={(e) => handlePropertyChange('mongodb', e.target.checked)}
+                className="rounded border-green-300 text-green-600 focus:ring-green-500"
+              />
+              <span className="text-green-700">MongoDB</span>
+            </label>
+
+            <label className="flex items-center space-x-2 text-xs">
+              <input
+                type="checkbox"
+                checked={currentComponent.properties?.redis || false}
+                onChange={(e) => handlePropertyChange('redis', e.target.checked)}
+                className="rounded border-green-300 text-green-600 focus:ring-green-500"
+              />
+              <span className="text-green-700">Redis</span>
+            </label>
+          </div>
+        </div>
+
+        {/* Configuration Summary */}
+        <div className="mt-4 pt-4 border-t border-green-200">
+          <h4 className="text-sm font-medium text-green-800 mb-3">Configuration Summary</h4>
+          
+          <div className="bg-white rounded-lg p-3 border border-green-200">
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <div className="flex justify-between">
+                <span className="text-green-600">Project Type:</span>
+                <span className="font-medium">{configSummary.projectType}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-green-600">Language:</span>
+                <span className="font-medium">{configSummary.language}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-green-600">Packaging:</span>
+                <span className="font-medium">{configSummary.packaging}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-green-600">Java Version:</span>
+                <span className="font-medium">{configSummary.javaVersion}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-green-600">Spring Boot:</span>
+                <span className="font-medium">{configSummary.springBootVersion}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-green-600">Group ID:</span>
+                <span className="font-medium">{configSummary.groupId}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-green-600">Artifact ID:</span>
+                <span className="font-medium">{configSummary.artifactId}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-green-600">Package:</span>
+                <span className="font-medium">{configSummary.packageName}</span>
+              </div>
+            </div>
+            
+            {configSummary.features.length > 0 && (
+              <div className="mt-3 pt-3 border-t border-green-100">
+                <div className="text-xs text-green-600 mb-2">Selected Dependencies:</div>
+                <div className="flex flex-wrap gap-1">
+                  {configSummary.features.map((feature, index) => (
+                    <span
+                      key={index}
+                      className="inline-block bg-green-100 text-green-700 text-xs px-2 py-1 rounded"
+                    >
+                      {feature}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const renderPropertiesTab = () => {
     if (!currentComponent) {
       return (
@@ -651,6 +1566,8 @@ const PropertiesPanel = ({
     return (
       <div className="space-y-4">
         {renderTechnologyInfo()}
+        {renderReactConfiguration()}
+        {renderSpringBootConfiguration()}
         {renderConnections()}
         {renderAdvancedProperties()}
         

@@ -1,5 +1,8 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Plus, Folder, Clock, Users, Sparkles, Settings, LogOut, ArrowRight, Calendar, Star, Trash2 } from 'lucide-react';
+import { 
+  Plus, Folder, Clock, Users, Sparkles, Settings, LogOut, ArrowRight, Calendar, Star, Trash2, Edit2,
+  Search, Bell, Download, Share2, Grid, List, Filter, TrendingUp, Activity, Zap, Target, Award
+} from 'lucide-react';
 import CreateProjectModal from './CreateProjectModal';
 import type { DashboardProps, Project } from '../types';
 
@@ -11,6 +14,72 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onCreateNewProject, onLogou
   // Delete confirmation modal state
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
+
+  // Edit project modal state
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [projectToEdit, setProjectToEdit] = useState<Project | null>(null);
+
+  // Templates modal state
+  const [showTemplatesModal, setShowTemplatesModal] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState<Project | null>(null);
+  
+  // New state for enhanced features
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState<'name' | 'date' | 'status'>('date');
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [showAnalytics, setShowAnalytics] = useState(false);
+
+  // Example templates (could be moved to a separate file)
+  const templates: Project[] = [
+    {
+      id: 'template-1',
+      name: 'Blog Platform',
+      description: 'A simple blog platform with authentication and CRUD features.',
+      lastModified: new Date().toISOString(),
+      technologies: ['React', 'Node.js', 'MongoDB'],
+      status: 'draft'
+    },
+    {
+      id: 'template-2',
+      name: 'Chat App',
+      description: 'A real-time chat application with WebSocket support.',
+      lastModified: new Date().toISOString(),
+      technologies: ['React', 'Express', 'Socket.io'],
+      status: 'draft'
+    },
+    {
+      id: 'template-3',
+      name: 'Portfolio Website',
+      description: 'A personal portfolio site to showcase projects and skills.',
+      lastModified: new Date().toISOString(),
+      technologies: ['React', 'TailwindCSS'],
+      status: 'draft'
+    }
+  ];
+
+  // Handler to open edit modal
+  const handleEditProject = (project: Project) => {
+    setProjectToEdit(project);
+    setShowEditModal(true);
+  };
+
+  // Handler to save edited project
+  const handleSaveEditedProject = (updatedProject: Project) => {
+    const updatedProjects = recentProjects.map((p) =>
+      p.id === updatedProject.id ? updatedProject : p
+    );
+    setRecentProjects(updatedProjects);
+    localStorage.setItem('userProjects', JSON.stringify(updatedProjects));
+    setShowEditModal(false);
+    setProjectToEdit(null);
+  };
+
+  // Handler to close edit modal
+  const handleCloseEditModal = () => {
+    setShowEditModal(false);
+    setProjectToEdit(null);
+  };
 
   // Migration function to convert old component structure to new format
   const migrateComponentStructure = (component: any): any => {
@@ -254,13 +323,40 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onCreateNewProject, onLogou
     };
   }, [recentProjects]);
 
-  // Filter projects based on current selection
-  const filteredProjects = useMemo(() => {
-    if (currentFilter === 'all') {
-      return recentProjects;
+  // Enhanced filtering and sorting
+  const filteredAndSortedProjects = useMemo(() => {
+    let filtered = recentProjects;
+    
+    // Apply status filter
+    if (currentFilter !== 'all') {
+      filtered = filtered.filter(project => project.status === currentFilter);
     }
-    return recentProjects.filter(project => project.status === currentFilter);
-  }, [recentProjects, currentFilter]);
+    
+    // Apply search filter
+    if (searchQuery) {
+      filtered = filtered.filter(project => 
+        project.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        project.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        project.technologies.some(tech => tech.toLowerCase().includes(searchQuery.toLowerCase()))
+      );
+    }
+    
+    // Apply sorting
+    filtered.sort((a, b) => {
+      switch (sortBy) {
+        case 'name':
+          return a.name.localeCompare(b.name);
+        case 'date':
+          return new Date(b.lastModified).getTime() - new Date(a.lastModified).getTime();
+        case 'status':
+          return a.status.localeCompare(b.status);
+        default:
+          return 0;
+      }
+    });
+    
+    return filtered;
+  }, [recentProjects, currentFilter, searchQuery, sortBy]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -414,7 +510,36 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onCreateNewProject, onLogou
               <h1 className="text-xl font-bold text-gray-900">Fullstack App Generator</h1>
             </div>
             
+            {/* Search Bar */}
+            <div className="hidden md:flex flex-1 max-w-md mx-8">
+              <div className="relative w-full">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <input
+                  type="text"
+                  placeholder="Search projects..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+            </div>
+            
             <div className="flex items-center space-x-4">
+              <button 
+                onClick={() => setShowAnalytics(true)}
+                className="p-2 text-gray-400 hover:text-blue-600 transition-colors"
+                title="View Analytics"
+              >
+                <TrendingUp className="w-5 h-5" />
+              </button>
+              <button 
+                onClick={() => setShowNotifications(true)}
+                className="p-2 text-gray-400 hover:text-yellow-600 transition-colors relative"
+                title="Notifications"
+              >
+                <Bell className="w-5 h-5" />
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">3</span>
+              </button>
               <div className="flex items-center space-x-3">
                 <img 
                   src={user?.avatar} 
@@ -461,7 +586,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onCreateNewProject, onLogou
           </button>
         </div>
 
-        {/* Quick Stats - Clickable for filtering */}
+        {/* Enhanced Quick Stats */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <button
             onClick={() => setCurrentFilter('all')}
@@ -528,85 +653,258 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onCreateNewProject, onLogou
               <h3 className="text-xl font-bold text-gray-900">Recent Projects</h3>
               {currentFilter !== 'all' && (
                 <span className="text-sm text-gray-500">
-                  Showing {currentFilter} projects ({filteredProjects.length})
+                  Showing {currentFilter} projects ({filteredAndSortedProjects.length})
                 </span>
               )}
             </div>
-            <button className="text-blue-600 hover:text-blue-700 font-medium flex items-center space-x-1">
-              <span>View All</span>
-              <ArrowRight className="w-4 h-4" />
-            </button>
+            
+            {/* Enhanced Controls */}
+            <div className="flex items-center space-x-3">
+              {/* Sort Dropdown */}
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as 'name' | 'date' | 'status')}
+                className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="date">Sort by Date</option>
+                <option value="name">Sort by Name</option>
+                <option value="status">Sort by Status</option>
+              </select>
+              
+              {/* View Mode Toggle */}
+              <div className="flex border border-gray-300 rounded-lg">
+                <button
+                  onClick={() => setViewMode('grid')}
+                  className={`px-3 py-2 text-sm transition-colors ${
+                    viewMode === 'grid' 
+                      ? 'bg-blue-600 text-white' 
+                      : 'bg-white text-gray-600 hover:bg-gray-50'
+                  }`}
+                >
+                  <Grid className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => setViewMode('list')}
+                  className={`px-3 py-2 text-sm transition-colors ${
+                    viewMode === 'list' 
+                      ? 'bg-blue-600 text-white' 
+                      : 'bg-white text-gray-600 hover:bg-gray-50'
+                  }`}
+                >
+                  <List className="w-4 h-4" />
+                </button>
+              </div>
+              
+              <button className="text-blue-600 hover:text-blue-700 font-medium flex items-center space-x-1">
+                <span>View All</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredProjects.map((project) => (
+          <div className={viewMode === 'grid' 
+            ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" 
+            : "space-y-4"
+          }>
+            {filteredAndSortedProjects.map((project: Project) => (
               <div 
                 key={project.id} 
-                className="border border-gray-200 rounded-xl p-6 hover:shadow-md transition-shadow cursor-pointer"
+                className={`border border-gray-200 rounded-xl hover:shadow-md transition-shadow cursor-pointer ${
+                  viewMode === 'grid' ? 'p-6' : 'p-4 flex items-center space-x-4'
+                }`}
                 onClick={() => {
-                  // Navigate to canvas with this project
-                  handleOpenProject(project);
+                  // Prevent navigation if edit modal is open
+                  if (!showEditModal) {
+                    handleOpenProject(project);
+                  }
                 }}
               >
-                <div className="flex items-start justify-between mb-4">
-                  <h4 className="font-semibold text-gray-900">{project.name}</h4>
-                  <div className={`px-2 py-1 rounded-full text-xs font-medium flex items-center space-x-1 ${getStatusColor(project.status)}`}>
-                    {getStatusIcon(project.status)}
-                    <span className="capitalize">{project.status}</span>
-                  </div>
-                </div>
-                
-                <p className="text-gray-600 text-sm mb-4 line-clamp-2">
-                  {project.description}
-                </p>
-                
-                <div className="flex flex-wrap gap-2 mb-4">
-                  {project.technologies.slice(0, 3).map((tech, index) => (
-                    <span key={index} className="bg-gray-100 text-gray-700 px-2 py-1 rounded-md text-xs">
-                      {tech}
-                    </span>
-                  ))}
-                  {project.technologies.length > 3 && (
-                    <span className="bg-gray-100 text-gray-700 px-2 py-1 rounded-md text-xs">
-                      +{project.technologies.length - 3} more
-                    </span>
-                  )}
-                </div>
-                
-                <div className="flex items-center justify-between text-xs text-gray-500">
-                  <div className="flex items-center space-x-1">
-                    <Calendar className="w-3 h-3" />
-                    <span>Modified {new Date(project.lastModified).toLocaleDateString()}</span>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <button 
-                      className="text-blue-600 hover:text-blue-700 font-medium"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        // Navigate to canvas with this project
-                        handleOpenProject(project);
-                      }}
-                    >
-                      Open
-                    </button>
-                    <button 
-                      className="text-red-600 hover:text-red-700 p-1 rounded hover:bg-red-50 transition-colors"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleDeleteProject(project);
-                      }}
-                      title="Delete project"
-                    >
-                      <Trash2 className="w-3 h-3" />
-                    </button>
-                  </div>
-                </div>
+                {viewMode === 'grid' ? (
+                  <>
+                    <div className="flex items-start justify-between mb-4">
+                      <h4 className="font-semibold text-gray-900">{project.name}</h4>
+                      <div className={`px-2 py-1 rounded-full text-xs font-medium flex items-center space-x-1 ${getStatusColor(project.status)}`}>
+                        {getStatusIcon(project.status)}
+                        <span className="capitalize">{project.status}</span>
+                      </div>
+                    </div>
+                    
+                    <p className="text-gray-600 text-sm mb-4 line-clamp-2">
+                      {project.description}
+                    </p>
+                    
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      {project.technologies.slice(0, 3).map((tech: string, index: number) => (
+                        <span key={index} className="bg-gray-100 text-gray-700 px-2 py-1 rounded-md text-xs">
+                          {tech}
+                        </span>
+                      ))}
+                      {project.technologies.length > 3 && (
+                        <span className="bg-gray-100 text-gray-700 px-2 py-1 rounded-md text-xs">
+                          +{project.technologies.length - 3} more
+                        </span>
+                      )}
+                    </div>
+                    
+                    <div className="flex items-center justify-between text-xs text-gray-500">
+                      <div className="flex items-center space-x-1">
+                        <Calendar className="w-3 h-3" />
+                        <span>Modified {new Date(project.lastModified).toLocaleDateString()}</span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <button 
+                          className="text-blue-600 hover:text-blue-700 font-medium"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenProject(project);
+                          }}
+                        >
+                          Open
+                        </button>
+                        <button
+                          className="text-gray-600 hover:text-gray-900 p-1 rounded hover:bg-gray-100 transition-colors"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleEditProject(project);
+                          }}
+                          title="Manage project"
+                        >
+                          <Edit2 className="w-3 h-3" />
+                        </button>
+                        <button 
+                          className="text-red-600 hover:text-red-700 p-1 rounded hover:bg-red-50 transition-colors"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteProject(project);
+                          }}
+                          title="Delete project"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between mb-2">
+                        <h4 className="font-semibold text-gray-900">{project.name}</h4>
+                        <div className={`px-2 py-1 rounded-full text-xs font-medium flex items-center space-x-1 ${getStatusColor(project.status)}`}>
+                          {getStatusIcon(project.status)}
+                          <span className="capitalize">{project.status}</span>
+                        </div>
+                      </div>
+                      <p className="text-gray-600 text-sm mb-2">{project.description}</p>
+                      <div className="flex items-center space-x-4 text-xs text-gray-500">
+                        <div className="flex items-center space-x-1">
+                          <Calendar className="w-3 h-3" />
+                          <span>Modified {new Date(project.lastModified).toLocaleDateString()}</span>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          {project.technologies.slice(0, 2).map((tech: string, index: number) => (
+                            <span key={index} className="bg-gray-100 text-gray-700 px-2 py-1 rounded-md text-xs">
+                              {tech}
+                            </span>
+                          ))}
+                          {project.technologies.length > 2 && (
+                            <span className="text-gray-500 text-xs">+{project.technologies.length - 2} more</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <button 
+                        className="text-blue-600 hover:text-blue-700 font-medium text-sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleOpenProject(project);
+                        }}
+                      >
+                        Open
+                      </button>
+                      <button
+                        className="text-gray-600 hover:text-gray-900 p-1 rounded hover:bg-gray-100 transition-colors"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEditProject(project);
+                        }}
+                        title="Manage project"
+                      >
+                        <Edit2 className="w-3 h-3" />
+                      </button>
+                      <button 
+                        className="text-red-600 hover:text-red-700 p-1 rounded hover:bg-red-50 transition-colors"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteProject(project);
+                        }}
+                        title="Delete project"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    </div>
+                  </>
+                )}
+      {/* Edit Project Modal */}
+      {showEditModal && projectToEdit && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4 shadow-xl">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Edit Project</h3>
+            <form
+              onSubmit={e => {
+                e.preventDefault();
+                if (projectToEdit) {
+                  // Save changes to localStorage and state
+                  handleSaveEditedProject(projectToEdit);
+                }
+              }}
+              className="space-y-4"
+            >
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Project Name</label>
+                <input
+                  type="text"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                  value={projectToEdit.name}
+                  onChange={e => setProjectToEdit({ ...projectToEdit, name: e.target.value })}
+                  required
+                  autoFocus
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                <textarea
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2"
+                  value={projectToEdit.description}
+                  onChange={e => setProjectToEdit({ ...projectToEdit, description: e.target.value })}
+                  rows={3}
+                />
+              </div>
+              <div className="flex space-x-3 pt-2">
+                <button
+                  type="button"
+                  onClick={handleCloseEditModal}
+                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  Save Changes
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
               </div>
             ))}
           </div>
 
           {/* Show message when no projects match filter */}
-          {filteredProjects.length === 0 && (
+          {filteredAndSortedProjects.length === 0 && (
             <div className="text-center py-12">
               <Folder className="w-12 h-12 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">No {currentFilter} projects found</h3>
@@ -615,12 +913,12 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onCreateNewProject, onLogou
           )}
         </div>
 
-        {/* Quick Actions */}
+        {/* Enhanced Quick Actions */}
         <div className="mt-8 bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
           <h3 className="text-xl font-bold text-gray-900 mb-6">Quick Actions</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <button className="flex items-center space-x-3 p-4 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors text-left">
-              <div className="bg-blue-100 p-2 rounded-lg">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <button className="flex items-center space-x-3 p-4 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors text-left group">
+              <div className="bg-blue-100 p-2 rounded-lg group-hover:bg-blue-200 transition-colors">
                 <Folder className="w-5 h-5 text-blue-600" />
               </div>
               <div>
@@ -629,9 +927,9 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onCreateNewProject, onLogou
               </div>
             </button>
             
-            <button className="flex items-center space-x-3 p-4 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors text-left">
-              <div className="bg-green-100 p-2 rounded-lg">
-                <Users className="w-5 h-5 text-green-600" />
+            <button className="flex items-center space-x-3 p-4 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors text-left group">
+              <div className="bg-green-100 p-2 rounded-lg group-hover:bg-green-200 transition-colors">
+                <Share2 className="w-5 h-5 text-green-600" />
               </div>
               <div>
                 <p className="font-medium text-gray-900">Share Project</p>
@@ -639,8 +937,21 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onCreateNewProject, onLogou
               </div>
             </button>
             
-            <button className="flex items-center space-x-3 p-4 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors text-left">
-              <div className="bg-purple-100 p-2 rounded-lg">
+            <button className="flex items-center space-x-3 p-4 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors text-left group">
+              <div className="bg-orange-100 p-2 rounded-lg group-hover:bg-orange-200 transition-colors">
+                <Download className="w-5 h-5 text-orange-600" />
+              </div>
+              <div>
+                <p className="font-medium text-gray-900">Export Code</p>
+                <p className="text-sm text-gray-500">Download project files</p>
+              </div>
+            </button>
+            
+            <button
+              className="flex items-center space-x-3 p-4 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors text-left group"
+              onClick={() => setShowTemplatesModal(true)}
+            >
+              <div className="bg-purple-100 p-2 rounded-lg group-hover:bg-purple-200 transition-colors">
                 <Settings className="w-5 h-5 text-purple-600" />
               </div>
               <div>
@@ -648,6 +959,118 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onCreateNewProject, onLogou
                 <p className="text-sm text-gray-500">Browse project templates</p>
               </div>
             </button>
+      {/* Templates Modal */}
+      {showTemplatesModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 max-w-lg w-full mx-4 shadow-xl">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Browse Templates</h3>
+            <div className="grid grid-cols-1 gap-4 mb-4">
+              {templates.map((template) => (
+                <div
+                  key={template.id}
+                  className={`border rounded-lg p-4 cursor-pointer transition-colors ${selectedTemplate?.id === template.id ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:bg-gray-50'}`}
+                  onClick={() => setSelectedTemplate(template)}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-semibold text-gray-900">{template.name}</span>
+                    {selectedTemplate?.id === template.id && (
+                      <span className="text-xs text-blue-600 font-medium">Selected</span>
+                    )}
+                  </div>
+                  <p className="text-gray-600 text-sm mb-1">{template.description}</p>
+                  <div className="flex flex-wrap gap-2">
+                    {template.technologies.map((tech, idx) => (
+                      <span key={idx} className="bg-gray-100 text-gray-700 px-2 py-1 rounded-md text-xs">{tech}</span>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="flex space-x-3 pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowTemplatesModal(false);
+                  setSelectedTemplate(null);
+                }}
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={!selectedTemplate}
+                onClick={() => {
+                  if (selectedTemplate) {
+                    // Create a new project from the template
+                    const newProject = {
+                      ...selectedTemplate,
+                      id: Date.now(),
+                      lastModified: new Date().toISOString(),
+                      status: 'active' as const,
+                    };
+                    setShowTemplatesModal(false);
+                    setSelectedTemplate(null);
+                    handleCreateProject(newProject);
+                  }
+                }}
+                className={`flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg transition-colors ${!selectedTemplate ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-700'}`}
+              >
+                Create Project
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+          </div>
+        </div>
+
+        {/* Analytics Section */}
+        <div className="mt-8 bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-xl font-bold text-gray-900">Project Analytics</h3>
+            <button 
+              onClick={() => setShowAnalytics(true)}
+              className="text-blue-600 hover:text-blue-700 font-medium flex items-center space-x-1"
+            >
+              <span>View Details</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="bg-gradient-to-br from-blue-50 to-blue-100 p-6 rounded-xl">
+              <div className="flex items-center justify-between mb-4">
+                <div className="bg-blue-500 p-2 rounded-lg">
+                  <Activity className="w-5 h-5 text-white" />
+                </div>
+                <span className="text-2xl font-bold text-blue-600">{quickStats.activeProjects}</span>
+              </div>
+              <h4 className="font-semibold text-gray-900 mb-1">Active Projects</h4>
+              <p className="text-sm text-gray-600">Currently in development</p>
+            </div>
+            
+            <div className="bg-gradient-to-br from-green-50 to-green-100 p-6 rounded-xl">
+              <div className="flex items-center justify-between mb-4">
+                <div className="bg-green-500 p-2 rounded-lg">
+                  <Target className="w-5 h-5 text-white" />
+                </div>
+                <span className="text-2xl font-bold text-green-600">{quickStats.completedProjects}</span>
+              </div>
+              <h4 className="font-semibold text-gray-900 mb-1">Completed</h4>
+              <p className="text-sm text-gray-600">Successfully finished</p>
+            </div>
+            
+            <div className="bg-gradient-to-br from-purple-50 to-purple-100 p-6 rounded-xl">
+              <div className="flex items-center justify-between mb-4">
+                <div className="bg-purple-500 p-2 rounded-lg">
+                  <Award className="w-5 h-5 text-white" />
+                </div>
+                <span className="text-2xl font-bold text-purple-600">{quickStats.totalTechnologies}</span>
+              </div>
+              <h4 className="font-semibold text-gray-900 mb-1">Technologies</h4>
+              <p className="text-sm text-gray-600">Total tech stack used</p>
+            </div>
           </div>
         </div>
       </main>
@@ -691,6 +1114,128 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onCreateNewProject, onLogou
               >
                 Delete Project
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Notifications Modal */}
+      {showNotifications && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4 shadow-xl">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Notifications</h3>
+              <button
+                onClick={() => setShowNotifications(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="space-y-3">
+              <div className="flex items-start space-x-3 p-3 bg-blue-50 rounded-lg">
+                <div className="bg-blue-500 p-1 rounded-full">
+                  <Sparkles className="w-3 h-3 text-white" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-gray-900">New template available</p>
+                  <p className="text-xs text-gray-600">React + Node.js starter template is now available</p>
+                  <p className="text-xs text-gray-500 mt-1">2 hours ago</p>
+                </div>
+              </div>
+              
+              <div className="flex items-start space-x-3 p-3 bg-green-50 rounded-lg">
+                <div className="bg-green-500 p-1 rounded-full">
+                  <Check className="w-3 h-3 text-white" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-gray-900">Project completed</p>
+                  <p className="text-xs text-gray-600">Your E-commerce Platform is ready for deployment</p>
+                  <p className="text-xs text-gray-500 mt-1">1 day ago</p>
+                </div>
+              </div>
+              
+              <div className="flex items-start space-x-3 p-3 bg-yellow-50 rounded-lg">
+                <div className="bg-yellow-500 p-1 rounded-full">
+                  <Zap className="w-3 h-3 text-white" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-gray-900">System update</p>
+                  <p className="text-xs text-gray-600">New features and improvements available</p>
+                  <p className="text-xs text-gray-500 mt-1">3 days ago</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Analytics Modal */}
+      {showAnalytics && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 max-w-4xl w-full mx-4 shadow-xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-semibold text-gray-900">Project Analytics</h3>
+              <button
+                onClick={() => setShowAnalytics(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <h4 className="font-semibold text-gray-900 mb-3">Project Status Distribution</h4>
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600">Active</span>
+                    <span className="font-medium">{quickStats.activeProjects}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600">Completed</span>
+                    <span className="font-medium">{quickStats.completedProjects}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600">Draft</span>
+                    <span className="font-medium">{recentProjects.filter(p => p.status === 'draft').length}</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <h4 className="font-semibold text-gray-900 mb-3">Technology Usage</h4>
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600">Total Technologies</span>
+                    <span className="font-medium">{quickStats.totalTechnologies}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600">Average per Project</span>
+                    <span className="font-medium">
+                      {recentProjects.length > 0 ? Math.round(quickStats.totalTechnologies / recentProjects.length) : 0}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="mt-6">
+              <h4 className="font-semibold text-gray-900 mb-3">Recent Activity</h4>
+              <div className="space-y-2">
+                {recentProjects.slice(0, 5).map((project) => (
+                  <div key={project.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div>
+                      <p className="font-medium text-gray-900">{project.name}</p>
+                      <p className="text-sm text-gray-600">Modified {new Date(project.lastModified).toLocaleDateString()}</p>
+                    </div>
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(project.status)}`}>
+                      {project.status}
+                    </span>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>

@@ -28,6 +28,17 @@ const CanvasComponent: React.FC<CanvasComponentProps> = React.memo(({
   const [isResizing, setIsResizing] = useState(false);
   const [dragStartPos, setDragStartPos] = useState<{ x: number; y: number } | null>(null);
   const [resizeStartSize, setResizeStartSize] = useState<{ width: number; height: number } | null>(null);
+  // Track if the component was just placed (dropped)
+  const [justPlaced, setJustPlaced] = useState(false);
+
+  // Set justPlaced to true when drag ends
+  useEffect(() => {
+    if (!isDragging && transform && !justPlaced) {
+      setJustPlaced(true);
+      // Remove highlight after 1s
+      setTimeout(() => setJustPlaced(false), 1000);
+    }
+  }, [isDragging, transform, justPlaced]);
   
   // Memoize tech data to prevent unnecessary lookups
   const tech = useMemo(() => getTechById(component.techId), [component.techId]);
@@ -78,7 +89,9 @@ const CanvasComponent: React.FC<CanvasComponentProps> = React.memo(({
   // Optimized className calculation with better performance
   const className = useMemo(() => {
     const classes = ['canvas-component', 'hover:shadow-lg', 'transition-all', 'duration-200'];
-    
+    if (justPlaced) {
+      classes.push('ring-4', 'ring-yellow-400', 'animate-pulse');
+    }
     if (isSelected) {
       classes.push('selected', 'ring-4', 'ring-blue-500');
     }
@@ -93,9 +106,8 @@ const CanvasComponent: React.FC<CanvasComponentProps> = React.memo(({
     if (isResizing) {
       classes.push('resizing');
     }
-    
     return classes.join(' ');
-  }, [isSelected, isConnectionStart, isConnecting, isDragging, isResizing]);
+  }, [isSelected, isConnectionStart, isConnecting, isDragging, isResizing, justPlaced]);
 
   // Optimized resize handling with throttling for better performance
   const handleMouseMove = useCallback((e: MouseEvent) => {
@@ -219,15 +231,15 @@ const CanvasComponent: React.FC<CanvasComponentProps> = React.memo(({
     >
       {/* Component Header */}
       <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center space-x-3 flex-1 min-w-0">
-          <div 
-            className="w-4 h-4 rounded-full flex-shrink-0 shadow-sm"
-            style={{ backgroundColor: tech?.color || '#6B7280' }}
-          />
-          <span className="text-sm font-semibold text-gray-900 truncate">
-            {component.properties?.name || tech?.name || 'Component'}
-          </span>
-        </div>
+      <div className="flex items-center space-x-3 flex-1 min-w-0">
+        <div 
+          className="w-4 h-4 rounded-full flex-shrink-0 shadow-sm"
+          style={{ backgroundColor: justPlaced ? '#facc15' : (tech?.color || '#6B7280') }}
+        />
+        <span className="text-sm font-semibold text-gray-900 truncate">
+          {component.properties?.name || tech?.name || 'Component'}
+        </span>
+      </div>
         
         {isSelected && (
           <div className="flex items-center space-x-1">

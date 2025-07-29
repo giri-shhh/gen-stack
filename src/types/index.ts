@@ -87,6 +87,8 @@ export interface HeaderProps {
   currentProject?: Project;
   onSaveProject?: () => Promise<void>;
   onDeleteProject?: () => void;
+  components?: CanvasComponent[];
+  connections?: Connection[];
 }
 
 export interface DashboardProps {

@@ -524,6 +524,8 @@ function App() {
           currentProject={currentProject || undefined}
           onSaveProject={handleSaveProject}
           onDeleteProject={handleDeleteCurrentProject}
+          components={components}
+          connections={connections}
         />
         
         <div className="flex flex-1 overflow-hidden">

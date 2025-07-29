@@ -22,7 +22,10 @@
     "predeploy": "npm run build",
     "deploy": "gh-pages -d dist",
     "lint": "eslint . --ext js,jsx,ts,tsx --report-unused-disable-directives --max-warnings 0",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "build-and-run": "node build-and-run.js",
+    "build-and-run:ps": "powershell -ExecutionPolicy Bypass -File build-and-run.ps1",
+    "build-and-run:bat": "build-and-run.bat"
   },
   "devDependencies": {
     "@types/file-saver": "^2.0.7",

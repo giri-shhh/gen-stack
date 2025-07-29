@@ -1,19 +1,38 @@
-import { useState } from 'react';
-import { X, Download, FileText, Folder, Code } from 'lucide-react';
+import React, { useState } from 'react';
+import { X, Download, GitBranch, Globe, FileText, Code, Folder, Settings } from 'lucide-react';
 import { saveAs } from 'file-saver';
 import JSZip from 'jszip';
 import { getTechById, getCategoryByTechId } from '../data/techStack';
-import type { CanvasComponent, Connection } from '../types';
+import type { CanvasComponent, Connection, Project } from '../types';
 
-interface CodeGeneratorProps {
+interface ExportModalProps {
+  isOpen: boolean;
+  onClose: () => void;
   components: CanvasComponent[];
   connections: Connection[];
-  onClose: () => void;
+  currentProject?: Project;
 }
 
-const CodeGenerator = ({ components, connections, onClose }: CodeGeneratorProps) => {
+type ExportOption = 'zip' | 'git';
+
+const ExportModal: React.FC<ExportModalProps> = ({ 
+  isOpen, 
+  onClose, 
+  components, 
+  connections, 
+  currentProject 
+}) => {
+  const [selectedOption, setSelectedOption] = useState<ExportOption>('zip');
   const [generating, setGenerating] = useState(false);
-  const [projectName, setProjectName] = useState('my-fullstack-app');
+  const [projectName, setProjectName] = useState(currentProject?.name || 'my-fullstack-app');
+  
+  // Git repository settings
+  const [gitSettings, setGitSettings] = useState({
+    repositoryUrl: '',
+    branch: 'main',
+    commitMessage: 'Initial commit from Fullstack App Generator',
+    isPrivate: true
+  });
 
   const generateProjectStructure = () => {
     const zip = new JSZip();
@@ -132,60 +151,23 @@ These scripts will automatically:
 
 If you prefer to set up manually:
 
-1. Install dependencies:
-   \`\`\`bash
-   npm install
-   \`\`\`
-
-2. Set up environment variables:
-   \`\`\`bash
-   cp .env.example .env
-   # Edit .env with your configuration
-   \`\`\`
-
-3. Start the development server:
-   \`\`\`bash
-   npm run dev
-   \`\`\`
+1. Install dependencies: \`npm install\`
+2. Copy \`.env.example\` to \`.env\` and configure your environment variables
+3. Run the development server: \`npm run dev\`
 
 For more information about the scripts, see \`scripts/README.md\`.
 
 ## Project Structure
 
-\`\`\`
-${projectName}/
-├── frontend/          # Frontend application
-├── backend/           # Backend API
-├── docker-compose.yml # Docker configuration
-├── Dockerfile         # Docker image definition
-└── README.md         # This file
-\`\`\`
-
-## Deployment
-
-### Local Development
-\`\`\`bash
-npm run dev
-\`\`\`
-
-### Production
-\`\`\`bash
-npm run build
-npm start
-\`\`\`
-
-### Docker
-\`\`\`bash
-docker-compose up -d
-\`\`\`
+This project was generated using the Fullstack App Generator, which creates a complete application architecture based on your selected components and their configurations.
 
 ## Contributing
 
 1. Fork the repository
-2. Create a feature branch
-3. Commit your changes
-4. Push to the branch
-5. Create a Pull Request
+2. Create your feature branch (\`git checkout -b feature/amazing-feature\`)
+3. Commit your changes (\`git commit -m 'Add some amazing feature'\`)
+4. Push to the branch (\`git push origin feature/amazing-feature\`)
+5. Open a Pull Request
 
 ## License
 
@@ -198,18 +180,19 @@ This project is licensed under the MIT License.
     const devDependencies: Record<string, string> = {};
 
     // Add common dependencies based on selected technologies
+    if (componentsByCategory.backend?.some(c => c.techId === 'express')) {
+      dependencies.express = '^4.18.2';
+      dependencies.cors = '^2.8.5';
+      dependencies.dotenv = '^16.0.3';
+    }
+
     if (componentsByCategory.frontend?.some(c => c.techId === 'react')) {
       dependencies.react = '^18.2.0';
       dependencies['react-dom'] = '^18.2.0';
     }
 
-    if (componentsByCategory.backend?.some(c => c.techId === 'express')) {
-      dependencies.express = '^4.18.2';
-      dependencies.cors = '^2.8.5';
-    }
-
     if (componentsByCategory.database?.some(c => c.techId === 'mongodb')) {
-      dependencies.mongodb = '^5.0.0';
+      dependencies.mongoose = '^7.0.3';
     }
 
     if (componentsByCategory.database?.some(c => c.techId === 'postgresql')) {
@@ -219,69 +202,43 @@ This project is licensed under the MIT License.
     return {
       name: projectName,
       version: '1.0.0',
-      description: 'Fullstack application generated with Fullstack App Generator',
-      main: 'backend/server.js',
+      description: 'A fullstack application generated with Fullstack App Generator',
+      main: 'index.js',
       scripts: {
-        dev: 'concurrently "npm run dev:backend" "npm run dev:frontend"',
-        'dev:backend': 'cd backend && npm run dev',
-        'dev:frontend': 'cd frontend && npm run dev',
-        build: 'npm run build:backend && npm run build:frontend',
-        'build:backend': 'cd backend && npm run build',
-        'build:frontend': 'cd frontend && npm run build',
-        start: 'cd backend && npm start',
-        test: 'npm run test:backend && npm run test:frontend',
-        'test:backend': 'cd backend && npm test',
-        'test:frontend': 'cd frontend && npm test'
+        start: 'node index.js',
+        dev: 'nodemon index.js',
+        test: 'jest'
       },
       dependencies,
-      devDependencies: {
-        ...devDependencies,
-        concurrently: '^7.6.0'
-      },
-      keywords: ['fullstack', 'generated', 'architecture'],
-      author: 'Fullstack App Generator',
+      devDependencies,
+      keywords: ['fullstack', 'generator', 'nodejs'],
+      author: '',
       license: 'MIT'
     };
   };
 
   const generateDockerfile = (_componentsByCategory: Record<string, CanvasComponent[]>) => {
-    return `# Multi-stage build for production
-FROM node:18-alpine AS builder
+    return `# Use the official Node.js runtime as the base image
+FROM node:18-alpine
 
+# Set the working directory in the container
 WORKDIR /app
 
-# Copy package files
+# Copy package.json and package-lock.json (if available)
 COPY package*.json ./
-COPY frontend/package*.json ./frontend/
-COPY backend/package*.json ./backend/
 
 # Install dependencies
 RUN npm ci --only=production
-RUN cd frontend && npm ci --only=production
-RUN cd backend && npm ci --only=production
 
-# Copy source code
+# Copy the rest of the application code
 COPY . .
 
-# Build applications
-RUN npm run build
-
-# Production stage
-FROM node:18-alpine AS production
-
-WORKDIR /app
-
-# Copy built applications
-COPY --from=builder /app/backend/dist ./backend/dist
-COPY --from=builder /app/frontend/dist ./frontend/dist
-COPY --from=builder /app/backend/package*.json ./backend/
-COPY --from=builder /app/backend/node_modules ./backend/node_modules
-
-# Expose port
+# Expose the port the app runs on
 EXPOSE 3000
 
-# Start the application
-CMD ["node", "backend/dist/server.js"]`;
+# Define the command to run the application
+CMD ["npm", "start"]
+`;
   };
 
   const generateDockerCompose = (componentsByCategory: Record<string, CanvasComponent[]>) => {
@@ -294,152 +251,91 @@ CMD ["node", "backend/dist/server.js"]`;
       }
     };
 
-    // Add database services
+    // Add database services if present
+    if (componentsByCategory.database?.some(c => c.techId === 'mongodb')) {
+      services.mongodb = {
+        image: 'mongo:latest',
+        ports: ['27017:27017'],
+        environment: ['MONGO_INITDB_ROOT_USERNAME=admin', 'MONGO_INITDB_ROOT_PASSWORD=password'],
+        volumes: ['./mongo-data:/data/db']
+      };
+      services.app.depends_on.push('mongodb');
+    }
+
     if (componentsByCategory.database?.some(c => c.techId === 'postgresql')) {
       services.postgres = {
-        image: 'postgres:15-alpine',
-        environment: {
-          POSTGRES_DB: 'app_db',
-          POSTGRES_USER: 'app_user',
-          POSTGRES_PASSWORD: 'app_password'
-        },
-        volumes: ['postgres_data:/var/lib/postgresql/data']
+        image: 'postgres:latest',
+        ports: ['5432:5432'],
+        environment: ['POSTGRES_USER=admin', 'POSTGRES_PASSWORD=password', 'POSTGRES_DB=app'],
+        volumes: ['./postgres-data:/var/lib/postgresql/data']
       };
       services.app.depends_on.push('postgres');
     }
 
-    if (componentsByCategory.database?.some(c => c.techId === 'mongodb')) {
-      services.mongo = {
-        image: 'mongo:6',
-        environment: {
-          MONGO_INITDB_ROOT_USERNAME: 'app_user',
-          MONGO_INITDB_ROOT_PASSWORD: 'app_password'
-        },
-        volumes: ['mongo_data:/data/db']
-      };
-      services.app.depends_on.push('mongo');
-    }
-
-    // Add Redis for caching
-    if (componentsByCategory.caching?.some(c => c.techId === 'redis-cache')) {
-      services.redis = {
-        image: 'redis:7-alpine',
-        ports: ['6379:6379']
-      };
-      services.app.depends_on.push('redis');
-    }
-
     return {
       version: '3.8',
-      services,
-      volumes: {
-        postgres_data: null,
-        mongo_data: null
-      }
+      services
     };
   };
 
   const generateEnvExample = (componentsByCategory: Record<string, CanvasComponent[]>) => {
-    const envVars = [
-      '# Application',
-      'NODE_ENV=development',
-      'PORT=3000',
-      '',
-      '# Database',
-    ];
-
-    if (componentsByCategory.database?.some(c => c.techId === 'postgresql')) {
-      envVars.push(
-        'POSTGRES_HOST=localhost',
-        'POSTGRES_PORT=5432',
-        'POSTGRES_DB=app_db',
-        'POSTGRES_USER=app_user',
-        'POSTGRES_PASSWORD=app_password',
-        ''
-      );
-    }
+    let envContent = '# Application Configuration\n';
+    envContent += 'NODE_ENV=development\n';
+    envContent += 'PORT=3000\n\n';
 
     if (componentsByCategory.database?.some(c => c.techId === 'mongodb')) {
-      envVars.push(
-        'MONGO_URI=mongodb://localhost:27017/app_db',
-        'MONGO_USER=app_user',
-        'MONGO_PASSWORD=app_password',
-        ''
-      );
+      envContent += '# MongoDB Configuration\n';
+      envContent += 'MONGODB_URI=mongodb://localhost:27017/app\n\n';
     }
 
-    if (componentsByCategory.caching?.some(c => c.techId === 'redis-cache')) {
-      envVars.push(
-        '# Redis',
-        'REDIS_HOST=localhost',
-        'REDIS_PORT=6379',
-        'REDIS_PASSWORD=',
-        ''
-      );
+    if (componentsByCategory.database?.some(c => c.techId === 'postgresql')) {
+      envContent += '# PostgreSQL Configuration\n';
+      envContent += 'POSTGRES_HOST=localhost\n';
+      envContent += 'POSTGRES_PORT=5432\n';
+      envContent += 'POSTGRES_USER=admin\n';
+      envContent += 'POSTGRES_PASSWORD=password\n';
+      envContent += 'POSTGRES_DB=app\n\n';
     }
 
-    if (componentsByCategory.additional?.some(c => c.techId === 'auth0')) {
-      envVars.push(
-        '# Authentication',
-        'AUTH0_DOMAIN=your-domain.auth0.com',
-        'AUTH0_CLIENT_ID=your-client-id',
-        'AUTH0_CLIENT_SECRET=your-client-secret',
-        ''
-      );
-    }
+    envContent += '# JWT Configuration\n';
+    envContent += 'JWT_SECRET=your-secret-key\n';
+    envContent += 'JWT_EXPIRES_IN=7d\n\n';
 
-    envVars.push(
-      '# API Keys',
-      'API_KEY=your-api-key',
-      '',
-      '# External Services',
-      'EXTERNAL_API_URL=https://api.example.com'
-    );
+    envContent += '# API Configuration\n';
+    envContent += 'API_BASE_URL=http://localhost:3000/api\n';
 
-    return envVars.join('\n');
+    return envContent;
   };
 
   const generateArchitectureDiagram = (components: CanvasComponent[], connections: Connection[]) => {
-    const componentList = components.map(comp => {
-      const tech = getTechById(comp.techId);
-      const category = getCategoryByTechId(comp.techId);
-      return `- ${comp.properties?.name || tech?.name || 'Component'} (${tech?.name}, ${category})`;
-    }).join('\n');
-
-    const connectionList = connections.map(conn => {
-      const fromComp = components.find(c => c.id === conn.source);
-      const toComp = components.find(c => c.id === conn.target);
-      return `- ${fromComp?.properties?.name || 'Component'} → ${toComp?.properties?.name || 'Component'}`;
-    }).join('\n');
-
-    return `# Architecture Diagram
+    let diagram = `# Architecture Diagram
 
 ## Components
 
-${componentList}
+${components.map(comp => {
+  const tech = getTechById(comp.techId);
+  return `- **${comp.properties?.name || tech?.name || comp.techId}** (${comp.techId})`;
+}).join('\n')}
 
 ## Connections
 
-${connectionList}
+${connections.map(conn => {
+  const sourceComp = components.find(c => c.id === conn.source);
+  const targetComp = components.find(c => c.id === conn.target);
+  const sourceName = sourceComp?.properties?.name || getTechById(sourceComp?.techId || '')?.name || conn.source;
+  const targetName = targetComp?.properties?.name || getTechById(targetComp?.techId || '')?.name || conn.target;
+  return `- ${sourceName} → ${targetName} (${conn.type})`;
+}).join('\n')}
 
-## Technology Distribution
+## Technology Stack Summary
 
-${Object.entries(
-  components.reduce((acc: Record<string, number>, comp) => {
-    const category = getCategoryByTechId(comp.techId);
-    if (category) {
-      acc[category] = (acc[category] || 0) + 1;
-    }
-    return acc;
-  }, {} as Record<string, number>)
-).map(([category, count]) => `- ${category}: ${count} components`).join('\n')}
-
-## Architecture Notes
-
-This architecture was designed using the Fullstack App Generator.
-The components are organized by their functional roles and connected
-to show data flow and service dependencies.
+${Array.from(new Set(components.map(c => c.techId))).map(techId => {
+  const tech = getTechById(techId);
+  return `- ${tech?.name || techId}`;
+}).join('\n')}
 `;
+
+    return diagram;
   };
 
   const generateFrontendPackageJson = (frontendComponents: CanvasComponent[]) => {
@@ -532,64 +428,60 @@ to show data flow and service dependencies.
     const dependencies: Record<string, string> = {};
     const devDependencies: Record<string, string> = {};
 
-    backendComponents.forEach(comp => {
-      switch (comp.techId) {
-        case 'express':
-          dependencies.express = '^4.18.2';
-          dependencies.cors = '^2.8.5';
-          dependencies.helmet = '^7.0.0';
-          break;
-        case 'fastapi':
-          // This would be for Python, but we're generating Node.js for now
-          break;
-        default:
-          // Handle other backend frameworks
-          break;
-      }
-    });
+    // Add Express dependencies
+    if (backendComponents.some(c => c.techId === 'express')) {
+      dependencies.express = '^4.18.2';
+      dependencies.cors = '^2.8.5';
+      dependencies.dotenv = '^16.0.3';
+    }
+
+    // Add database dependencies
+    if (backendComponents.some(c => c.techId === 'mongodb')) {
+      dependencies.mongoose = '^7.0.3';
+    }
+
+    if (backendComponents.some(c => c.techId === 'postgresql')) {
+      dependencies.pg = '^8.10.0';
+    }
+
+    // Add authentication dependencies
+    dependencies.jsonwebtoken = '^9.0.0';
+    dependencies.bcryptjs = '^2.4.3';
 
     return {
       name: `${projectName}-backend`,
       version: '1.0.0',
-      private: true,
+      description: 'Backend API for the fullstack application',
+      main: 'index.js',
       scripts: {
-        dev: 'nodemon src/server.js',
-        start: 'node src/server.js',
+        start: 'node index.js',
+        dev: 'nodemon index.js',
         test: 'jest'
       },
       dependencies,
       devDependencies: {
-        ...devDependencies,
-        nodemon: '^3.0.0',
-        jest: '^29.5.0'
+        nodemon: '^2.0.22',
+        ...devDependencies
       }
     };
   };
 
   const generateFrontendReadme = (frontendComponents: CanvasComponent[]) => {
-    const techNames = frontendComponents.map((c: CanvasComponent) => getTechById(c.techId)?.name).join(', ');
-    
-    return `# Frontend Application
+    const techStack = frontendComponents.map(c => getTechById(c.techId)?.name || c.techId).join(', ');
+
+    return `# Frontend
 
 This is the frontend application for ${projectName}.
 
 ## Technology Stack
 
-- ${techNames}
+- ${techStack}
 
 ## Getting Started
 
-1. Install dependencies:
-   \`\`\`bash
-   npm install
-   \`\`\`
-
-2. Start the development server:
-   \`\`\`bash
-   npm run dev
-   \`\`\`
-
-3. Open [http://localhost:3000](http://localhost:3000) in your browser.
+1. Install dependencies: \`npm install\`
+2. Start the development server: \`npm run dev\`
+3. Open [http://localhost:3000](http://localhost:3000) in your browser
 
 ## Available Scripts
 
@@ -597,70 +489,32 @@ This is the frontend application for ${projectName}.
 - \`npm run build\` - Build for production
 - \`npm run start\` - Start production server
 - \`npm run lint\` - Run ESLint
-
-## Project Structure
-
-\`\`\`
-frontend/
-├── src/           # Source code
-├── public/        # Static assets
-├── package.json   # Dependencies
-└── README.md     # This file
-\`\`\`
 `;
   };
 
   const generateBackendReadme = (backendComponents: CanvasComponent[]) => {
-    const techNames = backendComponents.map((c: CanvasComponent) => getTechById(c.techId)?.name).join(', ');
-    
+    const techStack = backendComponents.map(c => getTechById(c.techId)?.name || c.techId).join(', ');
+
     return `# Backend API
 
 This is the backend API for ${projectName}.
 
 ## Technology Stack
 
-- ${techNames}
+- ${techStack}
 
 ## Getting Started
 
-1. Install dependencies:
-   \`\`\`bash
-   npm install
-   \`\`\`
-
-2. Set up environment variables:
-   \`\`\`bash
-   cp .env.example .env
-   # Edit .env with your configuration
-   \`\`\`
-
-3. Start the development server:
-   \`\`\`bash
-   npm run dev
-   \`\`\`
-
-4. The API will be available at [http://localhost:3001](http://localhost:3001)
+1. Install dependencies: \`npm install\`
+2. Copy \`.env.example\` to \`.env\` and configure your environment variables
+3. Start the development server: \`npm run dev\`
+4. The API will be available at [http://localhost:3000](http://localhost:3000)
 
 ## Available Scripts
 
 - \`npm run dev\` - Start development server with hot reload
-- \`npm run start\` - Start production server
+- \`npm start\` - Start production server
 - \`npm test\` - Run tests
-
-## API Endpoints
-
-- \`GET /api/health\` - Health check
-- \`GET /api/status\` - Application status
-
-## Project Structure
-
-\`\`\`
-backend/
-├── src/           # Source code
-├── tests/         # Test files
-├── package.json   # Dependencies
-└── README.md     # This file
-\`\`\`
 `;
   };
 
@@ -1970,24 +1824,33 @@ The scripts automatically detect:
     zip.file('scripts/README.md', scriptsReadme);
   };
 
-  const handleGenerate = async () => {
+  const handleExport = async () => {
     setGenerating(true);
     try {
-      const zip = generateProjectStructure();
-      const blob = await zip.generateAsync({ type: 'blob' });
-      saveAs(blob, `${projectName}.zip`);
+      if (selectedOption === 'zip') {
+        const zip = generateProjectStructure();
+        const blob = await zip.generateAsync({ type: 'blob' });
+        saveAs(blob, `${projectName}.zip`);
+      } else if (selectedOption === 'git') {
+        // Simulate Git push (in a real implementation, this would integrate with Git APIs)
+        console.log('Pushing to Git repository:', gitSettings.repositoryUrl);
+        // Here you would implement actual Git integration
+        alert('Git integration would be implemented here. For now, the ZIP option is available.');
+      }
     } catch (error) {
-      console.error('Error generating project:', error);
+      console.error('Error exporting project:', error);
     } finally {
       setGenerating(false);
     }
   };
 
+  if (!isOpen) return null;
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-golden-lg p-golden-lg max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-golden-lg">
-          <h2 className="text-xl font-semibold text-gray-900">Generate Project Code</h2>
+          <h2 className="text-xl font-semibold text-gray-900">Export Project</h2>
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-gray-600"
@@ -1997,6 +1860,49 @@ The scripts automatically detect:
         </div>
 
         <div className="space-y-golden-md">
+          {/* Export Options */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-golden-sm">
+              Export Method
+            </label>
+            <div className="grid grid-cols-2 gap-golden-sm">
+              <button
+                onClick={() => setSelectedOption('zip')}
+                className={`p-golden-md rounded-golden border-2 transition-colors ${
+                  selectedOption === 'zip'
+                    ? 'border-blue-500 bg-blue-50 text-blue-700'
+                    : 'border-gray-200 hover:border-gray-300'
+                }`}
+              >
+                <div className="flex items-center space-x-golden-sm">
+                  <Download className="w-5 h-5" />
+                  <div className="text-left">
+                    <div className="font-medium">Download ZIP</div>
+                    <div className="text-sm text-gray-500">Generate and download project files</div>
+                  </div>
+                </div>
+              </button>
+              
+              <button
+                onClick={() => setSelectedOption('git')}
+                className={`p-golden-md rounded-golden border-2 transition-colors ${
+                  selectedOption === 'git'
+                    ? 'border-blue-500 bg-blue-50 text-blue-700'
+                    : 'border-gray-200 hover:border-gray-300'
+                }`}
+              >
+                <div className="flex items-center space-x-golden-sm">
+                  <GitBranch className="w-5 h-5" />
+                  <div className="text-left">
+                    <div className="font-medium">Push to Git</div>
+                    <div className="text-sm text-gray-500">Push directly to repository</div>
+                  </div>
+                </div>
+              </button>
+            </div>
+          </div>
+
+          {/* Project Name */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-golden-sm">
               Project Name
@@ -2010,6 +1916,71 @@ The scripts automatically detect:
             />
           </div>
 
+          {/* Git Settings */}
+          {selectedOption === 'git' && (
+            <div className="space-y-golden-sm">
+              <h3 className="font-medium text-gray-900 flex items-center space-x-golden-sm">
+                <Settings className="w-4 h-4" />
+                Git Repository Settings
+              </h3>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-golden-sm">
+                  Repository URL
+                </label>
+                <input
+                  type="url"
+                  value={gitSettings.repositoryUrl}
+                  onChange={(e) => setGitSettings(prev => ({ ...prev, repositoryUrl: e.target.value }))}
+                  className="w-full px-golden-md py-golden-sm border border-gray-300 rounded-golden focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  placeholder="https://github.com/username/repository.git"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-golden-sm">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-golden-sm">
+                    Branch
+                  </label>
+                  <input
+                    type="text"
+                    value={gitSettings.branch}
+                    onChange={(e) => setGitSettings(prev => ({ ...prev, branch: e.target.value }))}
+                    className="w-full px-golden-md py-golden-sm border border-gray-300 rounded-golden focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    placeholder="main"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-golden-sm">
+                    Commit Message
+                  </label>
+                  <input
+                    type="text"
+                    value={gitSettings.commitMessage}
+                    onChange={(e) => setGitSettings(prev => ({ ...prev, commitMessage: e.target.value }))}
+                    className="w-full px-golden-md py-golden-sm border border-gray-300 rounded-golden focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    placeholder="Initial commit"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-golden-sm">
+                <input
+                  type="checkbox"
+                  id="isPrivate"
+                  checked={gitSettings.isPrivate}
+                  onChange={(e) => setGitSettings(prev => ({ ...prev, isPrivate: e.target.checked }))}
+                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                <label htmlFor="isPrivate" className="text-sm text-gray-700">
+                  Make repository private
+                </label>
+              </div>
+            </div>
+          )}
+
+          {/* What will be generated */}
           <div className="bg-gray-50 p-golden-md rounded-golden">
             <h3 className="font-medium text-gray-900 mb-golden-sm">What will be generated:</h3>
             <ul className="space-y-golden-sm text-sm text-gray-600">
@@ -2036,6 +2007,7 @@ The scripts automatically detect:
             </ul>
           </div>
 
+          {/* Architecture Summary */}
           <div className="bg-blue-50 p-golden-md rounded-golden">
             <h3 className="font-medium text-blue-900 mb-golden-sm">Architecture Summary</h3>
             <div className="text-sm text-blue-800">
@@ -2053,19 +2025,19 @@ The scripts automatically detect:
             Cancel
           </button>
           <button
-            onClick={handleGenerate}
-            disabled={generating}
+            onClick={handleExport}
+            disabled={generating || (selectedOption === 'git' && !gitSettings.repositoryUrl)}
             className="flex-1 bg-primary-600 text-white py-golden-sm px-golden-md rounded-golden hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-golden-sm"
           >
             {generating ? (
               <>
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                Generating...
+                {selectedOption === 'zip' ? 'Generating...' : 'Pushing to Git...'}
               </>
             ) : (
               <>
-                <Download className="w-4 h-4" />
-                Generate & Download
+                {selectedOption === 'zip' ? <Download className="w-4 h-4" /> : <GitBranch className="w-4 h-4" />}
+                {selectedOption === 'zip' ? 'Generate & Download' : 'Push to Repository'}
               </>
             )}
           </button>
@@ -2075,4 +2047,4 @@ The scripts automatically detect:
   );
 };
 
-export default CodeGenerator; 
+export default ExportModal; 

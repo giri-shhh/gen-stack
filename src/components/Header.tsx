@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { Sparkles, Home, User, LogOut, Save, ChevronDown, Trash2, Download, Copy } from 'lucide-react';
+import ExportModal from './ExportModal';
 import type { HeaderProps } from '../types';
 
-const Header: React.FC<HeaderProps> = ({ onBackToLanding, user, onLogout, currentProject, onSaveProject, onDeleteProject }) => {
+const Header: React.FC<HeaderProps> = ({ onBackToLanding, user, onLogout, currentProject, onSaveProject, onDeleteProject, components, connections }) => {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showProjectMenu, setShowProjectMenu] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
 
   const handleSaveProject = async () => {
     if (!onSaveProject) return;
@@ -27,8 +29,7 @@ const Header: React.FC<HeaderProps> = ({ onBackToLanding, user, onLogout, curren
   };
 
   const handleExportProject = () => {
-    // TODO: Implement export functionality
-    console.log('Export project:', currentProject?.id);
+    setShowExportModal(true);
     setShowProjectMenu(false);
   };
 
@@ -165,6 +166,17 @@ const Header: React.FC<HeaderProps> = ({ onBackToLanding, user, onLogout, curren
           </div>
         )}
       </div>
+
+      {/* Export Modal */}
+      {showExportModal && (
+        <ExportModal
+          isOpen={showExportModal}
+          onClose={() => setShowExportModal(false)}
+          components={components || []}
+          connections={connections || []}
+          currentProject={currentProject}
+        />
+      )}
     </header>
   );
 };

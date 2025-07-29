@@ -196,6 +196,18 @@ const ConnectionLines: React.FC<ConnectionLinesProps> = ({ connections, componen
     // Use the actual mouse position
     const startIntersection = getIntersectionPoint(mousePosition, startCenter, startComponent);
     
+    // Calculate control points for a smooth curve
+    const dx = mousePosition.x - startIntersection.x;
+    const dy = mousePosition.y - startIntersection.y;
+    const controlPoint1 = {
+      x: startIntersection.x + dx * 0.3,
+      y: startIntersection.y + dy * 0.3
+    };
+    const controlPoint2 = {
+      x: mousePosition.x - dx * 0.3,
+      y: mousePosition.y - dy * 0.3
+    };
+    const pathData = `M ${startIntersection.x} ${startIntersection.y} C ${controlPoint1.x} ${controlPoint1.y} ${controlPoint2.x} ${controlPoint2.y} ${mousePosition.x} ${mousePosition.y}`;
     return (
       <g>
         <defs>
@@ -217,10 +229,9 @@ const ConnectionLines: React.FC<ConnectionLinesProps> = ({ connections, componen
             />
           </marker>
         </defs>
-        
-        {/* Connecting line with dashed style */}
+        {/* Connecting line with dashed style, now curved */}
         <path
-          d={`M ${startIntersection.x} ${startIntersection.y} L ${mousePosition.x} ${mousePosition.y}`}
+          d={pathData}
           stroke="#3b82f6"
           strokeWidth="2"
           fill="none"
@@ -231,7 +242,6 @@ const ConnectionLines: React.FC<ConnectionLinesProps> = ({ connections, componen
             animation: 'dash 1s linear infinite'
           }}
         />
-        
         {/* Connection point at start component border */}
         <circle
           cx={startIntersection.x}
