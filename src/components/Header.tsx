@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Sparkles, Home, User, LogOut, Save, ChevronDown, Trash2, Download, Copy } from 'lucide-react';
+import { Sparkles, Home, User, LogOut, Save, ChevronDown, Trash2, Download, Copy, Settings } from 'lucide-react';
 import ExportModal from './ExportModal';
 import type { HeaderProps } from '../types';
 
@@ -38,6 +38,9 @@ const Header: React.FC<HeaderProps> = ({ onBackToLanding, user, onLogout, curren
     console.log('Clone project:', currentProject?.id);
     setShowProjectMenu(false);
   };
+
+  // Check if any component is selected
+  const hasSelectedComponent = components?.some(comp => comp.selected) || false;
 
   return (
     <header className="h-header bg-white border-b border-gray-200 flex items-center justify-between px-golden-lg">
@@ -99,7 +102,7 @@ const Header: React.FC<HeaderProps> = ({ onBackToLanding, user, onLogout, curren
                   <Download className="w-4 h-4" />
                   <span>Export Project</span>
                 </button>
-                <div className="border-t border-gray-100 my-1"></div>
+                <div className="border-t border-gray-200 my-1"></div>
                 <button 
                   onClick={handleDeleteProject}
                   className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center space-x-2"
@@ -110,6 +113,24 @@ const Header: React.FC<HeaderProps> = ({ onBackToLanding, user, onLogout, curren
               </div>
             )}
           </div>
+        )}
+
+        {/* Properties Panel Toggle - Show when component is selected */}
+        {hasSelectedComponent && (
+          <button
+            onClick={() => {
+              // Scroll to properties panel if it exists
+              const propertiesPanel = document.querySelector('[data-properties-panel]');
+              if (propertiesPanel) {
+                propertiesPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+              }
+            }}
+            className="flex items-center space-x-2 px-3 py-2 text-sm text-green-600 hover:text-green-700 hover:bg-green-50 rounded-lg transition-colors border border-green-200"
+            title="Properties panel should be visible on the right side"
+          >
+            <Settings className="w-4 h-4" />
+            <span>Properties Panel</span>
+          </button>
         )}
       </div>
 

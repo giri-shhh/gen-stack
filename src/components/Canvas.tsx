@@ -14,6 +14,7 @@ const Canvas: React.FC<CanvasProps> = React.memo(({
   onConnectionAdd,
   onCanvasClick,
   onComponentDoubleClick,
+  onViewProjectStructure,
   draggedTech
 }) => {
   const { setNodeRef, isOver } = useDroppable({
@@ -254,7 +255,7 @@ const Canvas: React.FC<CanvasProps> = React.memo(({
 
       <div 
         ref={canvasRef} 
-        className="relative w-full h-full min-h-[800px] min-w-[1200px] transition-transform duration-200"
+        className="relative w-full h-full min-h-[600px] min-w-[800px] transition-transform duration-200"
         style={canvasTransformStyle}
       >
         {/* Connection Lines */}
@@ -297,6 +298,7 @@ const Canvas: React.FC<CanvasProps> = React.memo(({
             onConnectionStart={() => handleConnectionStart(component.id)}
             onConnectionEnd={() => handleConnectionEnd(component.id)}
             onDoubleClick={() => onComponentDoubleClick?.(component)}
+            onViewProjectStructure={() => onViewProjectStructure?.(component)}
             zoom={zoom}
           />
         ))}

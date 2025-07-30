@@ -214,4 +214,47 @@
   .resize-handle-dots:hover {
     opacity: 1 !important;
   }
+  
+  /* Layout fixes for properties panel visibility */
+  .canvas-container {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+  }
+  
+  .canvas-container-with-panel {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    margin-right: 0;
+  }
+  
+  /* Ensure properties panel is always visible when component is selected */
+  .properties-panel-visible {
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+  }
+  
+  /* Prevent canvas from overflowing when properties panel is shown */
+  .canvas-with-panel {
+    max-width: calc(100vw - 600px);
+    min-width: 400px;
+  }
+  
+  /* Ensure proper flex behavior */
+  .flex-layout {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+  }
+  
+  .flex-layout > * {
+    flex-shrink: 0;
+  }
+  
+  .flex-layout > .canvas-container {
+    flex: 1;
+    min-width: 0;
+  }
 } 

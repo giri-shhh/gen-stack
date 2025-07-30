@@ -13,6 +13,7 @@ const CanvasComponent: React.FC<CanvasComponentProps> = React.memo(({
   onUpdate,
   onRemove,
   onDoubleClick,
+  onViewProjectStructure,
   onConnectionStart,
   onConnectionEnd,
   zoom = 1
@@ -30,6 +31,9 @@ const CanvasComponent: React.FC<CanvasComponentProps> = React.memo(({
   const [resizeStartSize, setResizeStartSize] = useState<{ width: number; height: number } | null>(null);
   // Track if the component was just placed (dropped)
   const [justPlaced, setJustPlaced] = useState(false);
+  // Track clicks for custom double-click detection
+  const [clickCount, setClickCount] = useState(0);
+  const [clickTimeout, setClickTimeout] = useState<NodeJS.Timeout | null>(null);
 
   // Set justPlaced to true when drag ends
   useEffect(() => {
@@ -191,6 +195,15 @@ const CanvasComponent: React.FC<CanvasComponentProps> = React.memo(({
     };
   }, [isDragging, isResizing]);
 
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (clickTimeout) {
+        clearTimeout(clickTimeout);
+      }
+    };
+  }, [clickTimeout]);
+
   const handleConnectionClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
     if (isConnecting) {
@@ -205,15 +218,32 @@ const CanvasComponent: React.FC<CanvasComponentProps> = React.memo(({
     // Allow clicks unless we're actively dragging or resizing
     if (!isDragging && !isResizing) {
       onSelect();
+      
+      // Custom double-click detection
+      setClickCount(prev => {
+        const newCount = prev + 1;
+        if (newCount === 1) {
+          // First click - set timeout
+          if (clickTimeout) clearTimeout(clickTimeout);
+          const timeout = setTimeout(() => {
+            setClickCount(0);
+            setClickTimeout(null);
+          }, 300); // 300ms for double-click detection
+          setClickTimeout(timeout);
+        } else if (newCount === 2) {
+          // Double-click detected
+          console.log('Custom double-click detected on component:', component.id);
+          if (clickTimeout) clearTimeout(clickTimeout);
+          setClickTimeout(null);
+          onDoubleClick();
+          return 0;
+        }
+        return newCount;
+      });
     }
-  }, [isDragging, isResizing, onSelect]);
+  }, [isDragging, isResizing, onSelect, clickTimeout, onDoubleClick, component.id]);
 
-  const handleDoubleClick = useCallback((e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!isDragging && !isResizing) {
-      onDoubleClick();
-    }
-  }, [isDragging, isResizing, onDoubleClick]);
+  // Removed original double-click handler - using custom detection in handleClick
 
   const handleRemove = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
@@ -226,7 +256,6 @@ const CanvasComponent: React.FC<CanvasComponentProps> = React.memo(({
       style={style}
       className={className}
       onClick={handleClick}
-      onDoubleClick={handleDoubleClick}
       onMouseDown={handleMouseDown}
     >
       {/* Component Header */}
@@ -268,6 +297,11 @@ const CanvasComponent: React.FC<CanvasComponentProps> = React.memo(({
         <div className="text-center">
           <div className="text-lg font-semibold text-gray-800 mb-1">{tech?.name}</div>
           <div className="text-xs text-gray-500 capitalize">{tech?.description}</div>
+                     {isSelected && (
+             <div className="mt-1 text-xs text-blue-600 opacity-75">
+               Double-click to open properties in full view
+             </div>
+           )}
         </div>
       </div>
 
@@ -297,10 +331,30 @@ const CanvasComponent: React.FC<CanvasComponentProps> = React.memo(({
               </div>
             )}
           </div>
-          <div className="mt-1 text-xs text-blue-600 flex items-center space-x-1">
+                     <div className="mt-1 text-xs text-blue-600 flex items-center space-x-1">
+             <Folder className="w-3 h-3" />
+             <span>Double-click to open properties in full view</span>
+           </div>
+        </div>
+      )}
+
+      {/* View Project Structure Button - Only show when selected */}
+      {isSelected && selectedLibraries.length > 0 && (
+        <div className="mt-2">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              // Trigger project preview modal
+              if (onViewProjectStructure) {
+                onViewProjectStructure();
+              }
+            }}
+            className="w-full bg-green-600 text-white py-1.5 px-2 rounded text-xs font-medium hover:bg-green-700 transition-colors flex items-center justify-center space-x-1"
+            title="View Project Structure"
+          >
             <Folder className="w-3 h-3" />
-            <span>Double-click to preview</span>
-          </div>
+            <span>View Project Structure</span>
+          </button>
         </div>
       )}
 

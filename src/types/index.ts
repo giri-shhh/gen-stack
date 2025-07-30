@@ -110,6 +110,7 @@ export interface CanvasProps {
   onAddComponent: (component: CanvasComponent) => void;
   draggedTech?: Technology;
   onComponentDoubleClick?: (component: CanvasComponent) => void;
+  onViewProjectStructure?: (component: CanvasComponent) => void;
 }
 
 export interface SidebarProps {
@@ -159,6 +160,7 @@ export interface CanvasComponentProps {
   onUpdate: (updates: Partial<CanvasComponent>) => void;
   onRemove: () => void;
   onDoubleClick: () => void;
+  onViewProjectStructure?: () => void;
   onConnectionStart: () => void;
   onConnectionEnd: () => void;
   zoom: number;

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Download, GitBranch, Globe, FileText, Code, Folder, Settings } from 'lucide-react';
+import { X, Download, GitBranch, Globe, FileText, Code, Folder, Settings, BarChart3, Layers, Eye } from 'lucide-react';
 import { saveAs } from 'file-saver';
 import JSZip from 'jszip';
 import { getTechById, getCategoryByTechId } from '../data/techStack';
@@ -14,6 +14,7 @@ interface ExportModalProps {
 }
 
 type ExportOption = 'zip' | 'git';
+type OverviewTab = 'summary' | 'components' | 'structure' | 'files';
 
 const ExportModal: React.FC<ExportModalProps> = ({ 
   isOpen, 
@@ -25,6 +26,7 @@ const ExportModal: React.FC<ExportModalProps> = ({
   const [selectedOption, setSelectedOption] = useState<ExportOption>('zip');
   const [generating, setGenerating] = useState(false);
   const [projectName, setProjectName] = useState(currentProject?.name || 'my-fullstack-app');
+  const [activeOverviewTab, setActiveOverviewTab] = useState<OverviewTab>('summary');
   
   // Git repository settings
   const [gitSettings, setGitSettings] = useState({
@@ -34,21 +36,21 @@ const ExportModal: React.FC<ExportModalProps> = ({
     isPrivate: true
   });
 
+  // Group components by category for overview
+  const componentsByCategory: Record<string, CanvasComponent[]> = {};
+  components.forEach(comp => {
+    const category = getCategoryByTechId(comp.techId);
+    if (category && !componentsByCategory[category]) {
+      componentsByCategory[category] = [];
+    }
+    if (category) {
+      componentsByCategory[category].push(comp);
+    }
+  });
+
   const generateProjectStructure = () => {
     const zip = new JSZip();
     
-    // Group components by category
-    const componentsByCategory: Record<string, CanvasComponent[]> = {};
-    components.forEach(comp => {
-      const category = getCategoryByTechId(comp.techId);
-      if (category && !componentsByCategory[category]) {
-        componentsByCategory[category] = [];
-      }
-      if (category) {
-        componentsByCategory[category].push(comp);
-      }
-    });
-
     // Generate README
     const readmeContent = generateReadme(componentsByCategory, connections);
     zip.file('README.md', readmeContent);
@@ -96,6 +98,273 @@ const ExportModal: React.FC<ExportModalProps> = ({
     generateBuildScripts(zip);
 
     return zip;
+  };
+
+  // Generate project structure preview for overview
+  const generateProjectStructurePreview = () => {
+    const structure: Record<string, any> = {
+      'README.md': { type: 'file', description: 'Project documentation and setup instructions' },
+      'package.json': { type: 'file', description: 'Main project dependencies and scripts' },
+      '.env.example': { type: 'file', description: 'Environment variables template' },
+      'ARCHITECTURE.md': { type: 'file', description: 'Architecture documentation' }
+    };
+
+    // Add frontend structure
+    if (componentsByCategory.frontend) {
+      structure['frontend/'] = {
+        type: 'folder',
+        description: 'Frontend application',
+        children: {
+          'package.json': { type: 'file', description: 'Frontend dependencies' },
+          'README.md': { type: 'file', description: 'Frontend setup instructions' },
+          'src/': { type: 'folder', description: 'Source code', children: {} },
+          'public/': { type: 'folder', description: 'Public assets', children: {} }
+        }
+      };
+    }
+
+    // Add backend structure
+    if (componentsByCategory.backend) {
+      structure['backend/'] = {
+        type: 'folder',
+        description: 'Backend application',
+        children: {
+          'package.json': { type: 'file', description: 'Backend dependencies' },
+          'README.md': { type: 'file', description: 'Backend setup instructions' },
+          'src/': { type: 'folder', description: 'Source code', children: {} },
+          'routes/': { type: 'folder', description: 'API routes', children: {} }
+        }
+      };
+    }
+
+    // Add Docker files if Docker component exists
+    if (components.some(c => c.techId === 'docker')) {
+      structure['Dockerfile'] = { type: 'file', description: 'Docker configuration' };
+      structure['docker-compose.yml'] = { type: 'file', description: 'Docker Compose configuration' };
+    }
+
+    // Add build scripts
+    structure['scripts/'] = {
+      type: 'folder',
+      description: 'Build and run scripts',
+      children: {
+        'build-and-run.js': { type: 'file', description: 'Cross-platform build script' },
+        'build-and-run.ps1': { type: 'file', description: 'PowerShell build script' },
+        'build-and-run.bat': { type: 'file', description: 'Batch build script' },
+        'README.md': { type: 'file', description: 'Scripts documentation' }
+      }
+    };
+
+    return structure;
+  };
+
+  const renderProjectOverview = () => {
+    const structure = generateProjectStructurePreview();
+
+    const renderFileTree = (tree: Record<string, any>, path: string = '') => {
+      return Object.entries(tree).map(([name, item]: [string, any]) => {
+        const fullPath = path ? `${path}/${name}` : name;
+        const isFolder = item.type === 'folder';
+
+        return (
+          <div key={fullPath} className="ml-4">
+            <div className="flex items-center space-x-2 p-1 rounded hover:bg-gray-50">
+              {isFolder ? (
+                <Folder className="w-4 h-4 text-blue-500" />
+              ) : (
+                <FileText className="w-4 h-4 text-gray-500" />
+              )}
+              <span className="text-sm font-medium">{name}</span>
+              <span className="text-xs text-gray-500 ml-2">- {item.description}</span>
+            </div>
+            {isFolder && item.children && (
+              <div className="ml-4">
+                {renderFileTree(item.children, fullPath)}
+              </div>
+            )}
+          </div>
+        );
+      });
+    };
+
+    return (
+      <div className="bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 border border-indigo-200 rounded-xl p-6 shadow-sm">
+        <div className="flex items-center space-x-3 mb-6">
+          <div className="p-2 bg-indigo-100 rounded-lg">
+            <Eye className="w-5 h-5 text-indigo-600" />
+          </div>
+          <h3 className="font-semibold text-gray-900 text-lg">Project Overview</h3>
+        </div>
+
+        {/* Tab Navigation */}
+        <div className="flex space-x-1 bg-indigo-100 rounded-lg p-1 mb-6">
+          <button
+            onClick={() => setActiveOverviewTab('summary')}
+            className={`px-4 py-2 text-sm rounded-md font-medium transition-all duration-200 flex items-center space-x-2 ${
+              activeOverviewTab === 'summary'
+                ? 'bg-white text-indigo-700 shadow-sm'
+                : 'text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50'
+            }`}
+          >
+            <BarChart3 className="w-4 h-4" />
+            <span>Summary</span>
+          </button>
+          <button
+            onClick={() => setActiveOverviewTab('components')}
+            className={`px-4 py-2 text-sm rounded-md font-medium transition-all duration-200 flex items-center space-x-2 ${
+              activeOverviewTab === 'components'
+                ? 'bg-white text-indigo-700 shadow-sm'
+                : 'text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50'
+            }`}
+          >
+            <Layers className="w-4 h-4" />
+            <span>Components</span>
+          </button>
+          <button
+            onClick={() => setActiveOverviewTab('structure')}
+            className={`px-4 py-2 text-sm rounded-md font-medium transition-all duration-200 flex items-center space-x-2 ${
+              activeOverviewTab === 'structure'
+                ? 'bg-white text-indigo-700 shadow-sm'
+                : 'text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50'
+            }`}
+          >
+            <Folder className="w-4 h-4" />
+            <span>Structure</span>
+          </button>
+          <button
+            onClick={() => setActiveOverviewTab('files')}
+            className={`px-4 py-2 text-sm rounded-md font-medium transition-all duration-200 flex items-center space-x-2 ${
+              activeOverviewTab === 'files'
+                ? 'bg-white text-indigo-700 shadow-sm'
+                : 'text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50'
+            }`}
+          >
+            <FileText className="w-4 h-4" />
+            <span>Files</span>
+          </button>
+        </div>
+
+        {/* Tab Content */}
+        <div className="space-y-4">
+          {activeOverviewTab === 'summary' && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-white bg-opacity-80 backdrop-blur-sm rounded-lg p-4 border border-indigo-100">
+                  <div className="text-2xl font-bold text-indigo-600 mb-1">{components.length}</div>
+                  <div className="text-sm text-gray-600">Components</div>
+                </div>
+                <div className="bg-white bg-opacity-80 backdrop-blur-sm rounded-lg p-4 border border-indigo-100">
+                  <div className="text-2xl font-bold text-green-600 mb-1">{connections.length}</div>
+                  <div className="text-sm text-gray-600">Connections</div>
+                </div>
+              </div>
+
+              <div className="bg-white bg-opacity-80 backdrop-blur-sm rounded-lg p-4 border border-indigo-100">
+                <h4 className="font-semibold text-gray-900 mb-3">Technology Categories</h4>
+                <div className="space-y-2">
+                  {Object.entries(componentsByCategory).map(([category, comps]) => (
+                    <div key={category} className="flex justify-between items-center p-2 bg-indigo-50 rounded">
+                      <span className="text-sm font-medium text-gray-700 capitalize">{category}</span>
+                      <span className="text-sm font-bold text-indigo-600 bg-indigo-100 px-2 py-1 rounded-full">
+                        {comps.length}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeOverviewTab === 'components' && (
+            <div className="space-y-3 max-h-64 overflow-y-auto">
+              {components.map(comp => {
+                const tech = getTechById(comp.techId);
+                const category = getCategoryByTechId(comp.techId);
+                return (
+                  <div key={comp.id} className="bg-white bg-opacity-80 backdrop-blur-sm rounded-lg p-3 border border-indigo-100">
+                    <div className="flex items-center space-x-3">
+                      <div 
+                        className="w-4 h-4 rounded-full shadow-sm"
+                        style={{ backgroundColor: tech?.color || '#6B7280' }}
+                      />
+                      <div className="flex-1">
+                        <div className="font-medium text-gray-900">{comp.properties?.name || tech?.name}</div>
+                        <div className="text-xs text-gray-500">{tech?.description}</div>
+                      </div>
+                      <div className="text-xs text-indigo-600 bg-indigo-100 px-2 py-1 rounded-full capitalize">
+                        {category}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {activeOverviewTab === 'structure' && (
+            <div className="bg-white bg-opacity-80 backdrop-blur-sm rounded-lg p-4 border border-indigo-100">
+              <h4 className="font-semibold text-gray-900 mb-3">Generated File Structure</h4>
+              <div className="space-y-1 max-h-64 overflow-y-auto">
+                {renderFileTree(structure)}
+              </div>
+            </div>
+          )}
+
+          {activeOverviewTab === 'files' && (
+            <div className="space-y-3">
+              <div className="bg-white bg-opacity-80 backdrop-blur-sm rounded-lg p-4 border border-indigo-100">
+                <h4 className="font-semibold text-gray-900 mb-3">Key Files Generated</h4>
+                <div className="space-y-2 text-sm">
+                  <div className="flex items-center space-x-2">
+                    <FileText className="w-4 h-4 text-blue-500" />
+                    <span className="font-medium">README.md</span>
+                    <span className="text-gray-500">- Project documentation and setup</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Code className="w-4 h-4 text-green-500" />
+                    <span className="font-medium">package.json</span>
+                    <span className="text-gray-500">- Dependencies and scripts</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Settings className="w-4 h-4 text-orange-500" />
+                    <span className="font-medium">.env.example</span>
+                    <span className="text-gray-500">- Environment variables</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Folder className="w-4 h-4 text-purple-500" />
+                    <span className="font-medium">src/</span>
+                    <span className="text-gray-500">- Application source code</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Globe className="w-4 h-4 text-indigo-500" />
+                    <span className="font-medium">public/</span>
+                    <span className="text-gray-500">- Static assets</span>
+                  </div>
+                </div>
+              </div>
+
+              {components.some(c => c.techId === 'docker') && (
+                <div className="bg-white bg-opacity-80 backdrop-blur-sm rounded-lg p-4 border border-indigo-100">
+                  <h4 className="font-semibold text-gray-900 mb-3">Docker Files</h4>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex items-center space-x-2">
+                      <FileText className="w-4 h-4 text-blue-500" />
+                      <span className="font-medium">Dockerfile</span>
+                      <span className="text-gray-500">- Container configuration</span>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <FileText className="w-4 h-4 text-green-500" />
+                      <span className="font-medium">docker-compose.yml</span>
+                      <span className="text-gray-500">- Multi-service setup</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    );
   };
 
   const generateReadme = (componentsByCategory: Record<string, CanvasComponent[]>, connections: Connection[]) => {
@@ -1847,9 +2116,9 @@ The scripts automatically detect:
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-golden-lg p-golden-lg max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between mb-golden-lg">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl p-6 max-w-6xl w-full mx-4 max-h-[95vh] overflow-y-auto">
+        <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-semibold text-gray-900">Export Project</h2>
           <button
             onClick={onClose}
@@ -1859,22 +2128,22 @@ The scripts automatically detect:
           </button>
         </div>
 
-        <div className="space-y-golden-md">
+        <div className="space-y-6">
           {/* Export Options */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-golden-sm">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
               Export Method
             </label>
-            <div className="grid grid-cols-2 gap-golden-sm">
+            <div className="grid grid-cols-2 gap-3">
               <button
                 onClick={() => setSelectedOption('zip')}
-                className={`p-golden-md rounded-golden border-2 transition-colors ${
+                className={`p-4 rounded-lg border-2 transition-colors ${
                   selectedOption === 'zip'
                     ? 'border-blue-500 bg-blue-50 text-blue-700'
                     : 'border-gray-200 hover:border-gray-300'
                 }`}
               >
-                <div className="flex items-center space-x-golden-sm">
+                <div className="flex items-center space-x-3">
                   <Download className="w-5 h-5" />
                   <div className="text-left">
                     <div className="font-medium">Download ZIP</div>
@@ -1885,13 +2154,13 @@ The scripts automatically detect:
               
               <button
                 onClick={() => setSelectedOption('git')}
-                className={`p-golden-md rounded-golden border-2 transition-colors ${
+                className={`p-4 rounded-lg border-2 transition-colors ${
                   selectedOption === 'git'
                     ? 'border-blue-500 bg-blue-50 text-blue-700'
                     : 'border-gray-200 hover:border-gray-300'
                 }`}
               >
-                <div className="flex items-center space-x-golden-sm">
+                <div className="flex items-center space-x-3">
                   <GitBranch className="w-5 h-5" />
                   <div className="text-left">
                     <div className="font-medium">Push to Git</div>
@@ -1904,68 +2173,68 @@ The scripts automatically detect:
 
           {/* Project Name */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-golden-sm">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
               Project Name
             </label>
             <input
               type="text"
               value={projectName}
               onChange={(e) => setProjectName(e.target.value)}
-              className="w-full px-golden-md py-golden-sm border border-gray-300 rounded-golden focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder="my-fullstack-app"
             />
           </div>
 
           {/* Git Settings */}
           {selectedOption === 'git' && (
-            <div className="space-y-golden-sm">
-              <h3 className="font-medium text-gray-900 flex items-center space-x-golden-sm">
+            <div className="space-y-3">
+              <h3 className="font-medium text-gray-900 flex items-center space-x-2">
                 <Settings className="w-4 h-4" />
                 Git Repository Settings
               </h3>
               
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-golden-sm">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Repository URL
                 </label>
                 <input
                   type="url"
                   value={gitSettings.repositoryUrl}
                   onChange={(e) => setGitSettings(prev => ({ ...prev, repositoryUrl: e.target.value }))}
-                  className="w-full px-golden-md py-golden-sm border border-gray-300 rounded-golden focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   placeholder="https://github.com/username/repository.git"
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-golden-sm">
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-golden-sm">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
                     Branch
                   </label>
                   <input
                     type="text"
                     value={gitSettings.branch}
                     onChange={(e) => setGitSettings(prev => ({ ...prev, branch: e.target.value }))}
-                    className="w-full px-golden-md py-golden-sm border border-gray-300 rounded-golden focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     placeholder="main"
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-golden-sm">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
                     Commit Message
                   </label>
                   <input
                     type="text"
                     value={gitSettings.commitMessage}
                     onChange={(e) => setGitSettings(prev => ({ ...prev, commitMessage: e.target.value }))}
-                    className="w-full px-golden-md py-golden-sm border border-gray-300 rounded-golden focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     placeholder="Initial commit"
                   />
                 </div>
               </div>
 
-              <div className="flex items-center space-x-golden-sm">
+              <div className="flex items-center space-x-2">
                 <input
                   type="checkbox"
                   id="isPrivate"
@@ -1981,53 +2250,56 @@ The scripts automatically detect:
           )}
 
           {/* What will be generated */}
-          <div className="bg-gray-50 p-golden-md rounded-golden">
-            <h3 className="font-medium text-gray-900 mb-golden-sm">What will be generated:</h3>
-            <ul className="space-y-golden-sm text-sm text-gray-600">
-              <li className="flex items-center space-x-golden-sm">
-                <FileText className="w-4 h-4 text-primary-600" />
+          <div className="bg-gray-50 p-4 rounded-lg">
+            <h3 className="font-medium text-gray-900 mb-2">What will be generated:</h3>
+            <ul className="space-y-2 text-sm text-gray-600">
+              <li className="flex items-center space-x-2">
+                <FileText className="w-4 h-4 text-blue-600" />
                 README.md with setup instructions
               </li>
-              <li className="flex items-center space-x-golden-sm">
-                <Code className="w-4 h-4 text-primary-600" />
+              <li className="flex items-center space-x-2">
+                <Code className="w-4 h-4 text-blue-600" />
                 Package.json with dependencies
               </li>
-              <li className="flex items-center space-x-golden-sm">
-                <Folder className="w-4 h-4 text-primary-600" />
+              <li className="flex items-center space-x-2">
+                <Folder className="w-4 h-4 text-blue-600" />
                 Project structure and basic templates
               </li>
-              <li className="flex items-center space-x-golden-sm">
-                <FileText className="w-4 h-4 text-primary-600" />
+              <li className="flex items-center space-x-2">
+                <FileText className="w-4 h-4 text-blue-600" />
                 Docker configuration (if Docker is selected)
               </li>
-              <li className="flex items-center space-x-golden-sm">
-                <FileText className="w-4 h-4 text-primary-600" />
+              <li className="flex items-center space-x-2">
+                <FileText className="w-4 h-4 text-blue-600" />
                 Environment configuration
               </li>
             </ul>
           </div>
 
           {/* Architecture Summary */}
-          <div className="bg-blue-50 p-golden-md rounded-golden">
-            <h3 className="font-medium text-blue-900 mb-golden-sm">Architecture Summary</h3>
+          <div className="bg-blue-50 p-4 rounded-lg">
+            <h3 className="font-medium text-blue-900 mb-2">Architecture Summary</h3>
             <div className="text-sm text-blue-800">
               <p><strong>{components.length}</strong> components selected</p>
               <p><strong>{connections.length}</strong> connections defined</p>
             </div>
           </div>
+
+          {/* Project Overview */}
+          {renderProjectOverview()}
         </div>
 
-        <div className="flex space-x-golden-sm mt-golden-lg">
+        <div className="flex space-x-3 mt-6">
           <button
             onClick={onClose}
-            className="flex-1 bg-gray-100 text-gray-700 py-golden-sm px-golden-md rounded-golden hover:bg-gray-200 transition-colors"
+            className="flex-1 bg-gray-100 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-200 transition-colors"
           >
             Cancel
           </button>
           <button
             onClick={handleExport}
             disabled={generating || (selectedOption === 'git' && !gitSettings.repositoryUrl)}
-            className="flex-1 bg-primary-600 text-white py-golden-sm px-golden-md rounded-golden hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-golden-sm"
+            className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
           >
             {generating ? (
               <>

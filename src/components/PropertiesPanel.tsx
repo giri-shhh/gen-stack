@@ -1,6 +1,14 @@
 import React, { useState, useMemo } from 'react';
 import { Settings, Info, Link, Zap, Shield, Database, Globe, Maximize2, X, Search, Package, Folder, FileText, Check, Plus } from 'lucide-react';
 import { getTechById, getCategoryByTechId } from '../data/techStack';
+import {
+  TechnologyInfo,
+  ComponentProperties,
+  ConnectionsPanel,
+  ReactConfiguration,
+  SpringBootConfiguration,
+  ProjectStructureViewer
+} from './properties';
 
 import type { CanvasComponent, Connection } from '../types';
 
@@ -15,6 +23,8 @@ interface PropertiesPanelProps {
   showProjectPreview: boolean;
   setShowProjectPreview: (show: boolean) => void;
   previewComponent: CanvasComponent | null;
+  isPopupMode?: boolean;
+  setIsPopupMode?: (isPopup: boolean) => void;
 }
 
 const PropertiesPanel = ({
@@ -27,13 +37,22 @@ const PropertiesPanel = ({
 
   showProjectPreview,
   setShowProjectPreview,
-  previewComponent
+  previewComponent,
+  isPopupMode: externalIsPopupMode,
+  setIsPopupMode: externalSetIsPopupMode
 }: PropertiesPanelProps) => {
   const [activeTab, setActiveTab] = useState('properties');
-  const [isPopupMode, setIsPopupMode] = useState(false);
+  const [internalIsPopupMode, setInternalIsPopupMode] = useState(false);
   const [showAddOnModal, setShowAddOnModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedLibraries, setSelectedLibraries] = useState<Record<string, any[]>>({});
+  const [selectedFile, setSelectedFile] = useState<string | null>(null);
+  const [fileContent, setFileContent] = useState<string>('');
+  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
+
+  // Use external popup mode control if provided, otherwise use internal state
+  const isPopupMode = externalIsPopupMode !== undefined ? externalIsPopupMode : internalIsPopupMode;
+  const setIsPopupMode = externalSetIsPopupMode || setInternalIsPopupMode;
 
   // const tech = selectedComponent ? getTechById(selectedComponent.techId) : null;
   // const category = selectedComponent ? getCategoryByTechId(selectedComponent.techId) : null;
@@ -1653,6 +1672,458 @@ const PropertiesPanel = ({
     );
   };
 
+  const renderProjectStructureTab = () => {
+    if (!currentComponent) {
+      return (
+        <div className="text-center text-gray-500 py-8">
+          <Folder className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+          <p>Select a component to view its project structure</p>
+        </div>
+      );
+    }
+
+    const generateProjectStructure = () => {
+      const componentType = currentComponent.techId;
+      const projectName = currentComponent.properties?.name || 'my-app';
+      
+      // Base structure for all projects
+      const baseStructure = {
+        'README.md': {
+          type: 'file',
+          content: `# ${projectName}
+
+This project was generated using the Fullstack App Generator.
+
+## Technology Stack
+- ${currentTech?.name || 'Unknown Technology'}
+
+## Available Scripts
+
+- \`npm start\`: Runs the app in development mode
+- \`npm run build\`: Builds the app for production
+- \`npm test\`: Launches the test runner
+`
+        }
+      };
+
+      // React-specific structure
+      if (componentType === 'react') {
+        return {
+          ...baseStructure,
+          'package.json': {
+            type: 'file',
+            content: `{
+  "name": "${projectName}",
+  "version": "0.1.0",
+  "private": true,
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject"
+  }
+}`
+          },
+          'public/': {
+            type: 'folder',
+            children: {
+              'index.html': {
+                type: 'file',
+                content: `<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>${projectName}</title>
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>`
+              },
+              'favicon.ico': { type: 'file', content: 'Binary file' },
+              'manifest.json': {
+                type: 'file',
+                content: `{
+  "short_name": "${projectName}",
+  "name": "${projectName}",
+  "icons": []
+}`
+              }
+            }
+          },
+          'src/': {
+            type: 'folder',
+            children: {
+              'index.js': {
+                type: 'file',
+                content: `import React from 'react';
+import ReactDOM from 'react-dom/client';
+import './index.css';
+import App from './App';
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>
+);`
+              },
+              'App.js': {
+                type: 'file',
+                content: `import React from 'react';
+import './App.css';
+
+function App() {
+  return (
+    <div className="App">
+      <header className="App-header">
+        <h1>Welcome to ${projectName}</h1>
+      </header>
+    </div>
+  );
+}
+
+export default App;`
+              },
+              'App.css': {
+                type: 'file',
+                content: `.App {
+  text-align: center;
+}
+
+.App-header {
+  background-color: #282c34;
+  padding: 20px;
+  color: white;
+}
+`
+              },
+              'index.css': {
+                type: 'file',
+                content: `body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}`
+              }
+            }
+          }
+        };
+      }
+
+      // Spring Boot-specific structure
+      if (componentType === 'spring') {
+        const springStructure = {
+          ...baseStructure,
+          'pom.xml': {
+            type: 'file',
+            content: `<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 
+         http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>3.1.0</version>
+    </parent>
+    
+    <groupId>com.example</groupId>
+    <artifactId>${projectName}</artifactId>
+    <version>0.1.0</version>
+    <name>${projectName}</name>
+    <description>${currentComponent.properties?.description || 'Spring Boot Application'}</description>
+    
+    <properties>
+        <java.version>17</java.version>
+    </properties>
+    
+    <dependencies>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+    
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+</project>`
+          },
+          'src/main/java/com/example/Application.java': {
+            type: 'file',
+            content: `package com.example;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@SpringBootApplication
+public class Application {
+    public static void main(String[] args) {
+        SpringApplication.run(Application.class, args);
+    }
+}`
+          },
+          'src/main/java/com/example/controller/HelloController.java': {
+            type: 'file',
+            content: `package com.example.controller;
+
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+public class HelloController {
+    
+    @GetMapping("/")
+    public String hello() {
+        return "Hello from ${projectName}!";
+    }
+}`
+          },
+          'src/main/resources/application.properties': {
+            type: 'file',
+            content: `server.port=8080
+spring.application.name=${projectName}`
+          },
+          'src/test/java/com/example/ApplicationTests.java': {
+            type: 'file',
+            content: `package com.example;
+
+import org.junit.jupiter.api.Test;
+import org.springframework.boot.test.context.SpringBootTest;
+
+@SpringBootTest
+class ApplicationTests {
+    @Test
+    void contextLoads() {
+    }
+}`
+          }
+        };
+        return springStructure;
+      }
+
+      // Node.js/Express-specific structure
+      if (componentType === 'node' || componentType === 'express') {
+        return {
+          ...baseStructure,
+          'package.json': {
+            type: 'file',
+            content: `{
+  "name": "${projectName}",
+  "version": "1.0.0",
+  "description": "${currentComponent.properties?.description || 'Node.js Application'}",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js",
+    "test": "jest"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.22"
+  }
+}`
+          },
+          'index.js': {
+            type: 'file',
+            content: `const express = require('express');
+const cors = require('cors');
+
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+app.use(cors());
+app.use(express.json());
+
+app.get('/', (req, res) => {
+  res.json({ message: 'Welcome to ${projectName}!' });
+});
+
+app.listen(PORT, () => {
+  console.log(\`Server is running on port \${PORT}\`);
+});`
+          },
+          'src/': {
+            type: 'folder',
+            children: {
+              'routes/': {
+                type: 'folder',
+                children: {
+                  'index.js': {
+                    type: 'file',
+                    content: `const express = require('express');
+const router = express.Router();
+
+router.get('/', (req, res) => {
+  res.json({ message: 'API is working!' });
+});
+
+module.exports = router;`
+                  }
+                }
+              }
+            }
+          }
+        };
+      }
+
+      // Default structure for unknown components
+      return {
+        ...baseStructure,
+        'package.json': {
+          type: 'file',
+          content: `{
+  "name": "${projectName}",
+  "version": "0.1.0",
+  "description": "${currentComponent.properties?.description || 'Generated Project'}",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  }
+}`
+        },
+        'index.js': {
+          type: 'file',
+          content: `console.log('Hello from ${projectName}!');`
+        }
+      };
+    };
+
+    const renderFileTree = (tree: any, path: string = '') => {
+      return Object.entries(tree).map(([name, item]: [string, any]) => {
+        const fullPath = path ? `${path}/${name}` : name;
+        const isFolder = item.type === 'folder';
+        const isSelected = selectedFile === fullPath;
+        const isExpanded = expandedFolders.has(fullPath);
+
+        return (
+          <div key={fullPath} className="ml-4">
+            <div
+              className={`flex items-center space-x-2 p-1 rounded cursor-pointer hover:bg-gray-100 ${
+                isSelected ? 'bg-blue-100 text-blue-700' : ''
+              }`}
+              onClick={() => {
+                if (isFolder) {
+                  const newExpanded = new Set(expandedFolders);
+                  if (isExpanded) {
+                    newExpanded.delete(fullPath);
+                  } else {
+                    newExpanded.add(fullPath);
+                  }
+                  setExpandedFolders(newExpanded);
+                } else {
+                  setSelectedFile(fullPath);
+                  setFileContent(item.content || '');
+                }
+              }}
+            >
+              {isFolder ? (
+                <Folder className={`w-4 h-4 text-blue-500 ${isExpanded ? 'fill-current' : ''}`} />
+              ) : (
+                <FileText className="w-4 h-4 text-gray-500" />
+              )}
+              <span className="text-sm">{name}</span>
+            </div>
+            {isFolder && item.children && isExpanded && (
+              <div className="ml-4">
+                {renderFileTree(item.children, fullPath)}
+              </div>
+            )}
+          </div>
+        );
+      });
+    };
+
+    const projectStructure = generateProjectStructure();
+
+    return (
+      <div className="space-y-4">
+        <div className="bg-white border border-gray-200 rounded-lg p-4">
+          <h3 className="font-semibold text-gray-900 mb-3 flex items-center">
+            <Folder className="w-4 h-4 mr-2" />
+            Project Structure
+          </h3>
+          <div className="text-sm text-gray-600 mb-4">
+            Generated project structure for <strong>{currentComponent.properties?.name || currentComponent.techId}</strong>
+          </div>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {/* File Tree */}
+            <div className="bg-gray-50 rounded-lg p-3">
+              <h4 className="font-medium text-gray-900 mb-2">File Structure</h4>
+              <div className="space-y-1 max-h-64 overflow-y-auto">
+                {renderFileTree(projectStructure)}
+              </div>
+            </div>
+
+            {/* File Content */}
+            <div className="bg-gray-50 rounded-lg p-3">
+              <h4 className="font-medium text-gray-900 mb-2">File Content</h4>
+              {selectedFile ? (
+                <div className="space-y-2">
+                  <div className="text-xs text-gray-500">{selectedFile}</div>
+                  <pre className="bg-gray-900 text-green-400 p-3 rounded text-xs overflow-x-auto max-h-64 overflow-y-auto">
+                    {fileContent}
+                  </pre>
+                </div>
+              ) : (
+                <div className="text-gray-500 text-sm py-8 text-center">
+                  Select a file to view its content
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white border border-gray-200 rounded-lg p-4">
+          <h3 className="font-semibold text-gray-900 mb-3">Project Information</h3>
+          <div className="grid grid-cols-2 gap-4 text-sm">
+            <div>
+              <div className="font-medium text-gray-700">Project Name</div>
+              <div className="text-gray-900">{currentComponent.properties?.name || 'React App'}</div>
+            </div>
+            <div>
+              <div className="font-medium text-gray-700">Technology</div>
+              <div className="text-gray-900">{currentTech?.name || 'Unknown'}</div>
+            </div>
+            <div>
+              <div className="font-medium text-gray-700">Description</div>
+              <div className="text-gray-900">{currentComponent.properties?.description || 'No description'}</div>
+            </div>
+            <div>
+              <div className="font-medium text-gray-700">Files Generated</div>
+              <div className="text-gray-900">{Object.keys(projectStructure).length} files</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const renderPropertiesContent = () => (
     <div className="h-full flex flex-col bg-gray-50">
       <div className="p-4 border-b border-gray-200 bg-white">
@@ -1691,12 +2162,24 @@ const PropertiesPanel = ({
           >
             Summary
           </button>
+          <button
+            onClick={() => setActiveTab('project-structure')}
+            className={`px-3 py-2 text-sm rounded-md font-medium transition-colors ${
+              activeTab === 'project-structure'
+                ? 'bg-blue-100 text-blue-700'
+                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+            }`}
+          >
+            Project Structure
+          </button>
         </div>
       </div>
 
       {/* Tab Content */}
       <div className="flex-1 overflow-y-auto p-4">
-        {activeTab === 'properties' ? renderPropertiesTab() : renderSummaryTab()}
+        {activeTab === 'properties' && renderPropertiesTab()}
+        {activeTab === 'summary' && renderSummaryTab()}
+        {activeTab === 'project-structure' && renderProjectStructureTab()}
       </div>
     </div>
   );

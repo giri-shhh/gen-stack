@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { DndContext, DragOverlay, closestCenter } from '@dnd-kit/core';
+import { Settings } from 'lucide-react';
 
 import LandingPage from './components/LandingPage';
 import Dashboard from './components/Dashboard';
 import Canvas from './components/Canvas';
 import Sidebar from './components/Sidebar';
-import PropertiesPanel from './components/PropertiesPanel';
+import PropertiesPanel from './components/PropertiesPanelModular';
 import ResizablePanel from './components/ResizablePanel';
 import AuthModal from './components/AuthModal';
 import Header from './components/Header';
@@ -67,6 +68,7 @@ function App() {
   // Properties panel state
   const [showProjectPreview, setShowProjectPreview] = useState(false);
   const [previewComponent, setPreviewComponent] = useState<CanvasComponent | null>(null);
+  const [isPropertiesPanelPopup, setIsPropertiesPanelPopup] = useState(false);
 
   // Panel width state
   const [sidebarWidth, setSidebarWidth] = useState(() => {
@@ -93,11 +95,20 @@ function App() {
       if (event.key === 'Escape') {
         setSelectedComponent(null);
       }
+      
+      // P key to focus properties panel when component is selected
+      if (event.key === 'p' && selectedComponent) {
+        event.preventDefault();
+        const propertiesPanel = document.querySelector('[data-properties-panel]');
+        if (propertiesPanel) {
+          propertiesPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+      }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [currentProject]);
+  }, [currentProject, selectedComponent]);
 
   // Migration function to convert old component structure to new format
   const migrateComponentStructure = (component: any): CanvasComponent => {
@@ -332,8 +343,25 @@ function App() {
   };
 
   const handleComponentDoubleClick = (component: CanvasComponent) => {
+    console.log('App: handleComponentDoubleClick called for component:', component.id);
+    // Select the component and ensure properties panel is visible
+    setSelectedComponent(component);
+    // Open properties panel in popup mode
+    setIsPropertiesPanelPopup(true);
+    // Show a toast notification to confirm double-click worked
+    setToast({
+      message: `Properties panel opened in full view for ${component.properties?.name || component.techId}`,
+      type: 'success'
+    });
+  };
+
+  const handleViewProjectStructure = (component: CanvasComponent) => {
     setPreviewComponent(component);
     setShowProjectPreview(true);
+  };
+
+  const handlePropertiesPanelPopupToggle = (isPopup: boolean) => {
+    setIsPropertiesPanelPopup(isPopup);
   };
 
   // Handle delete current project
@@ -528,7 +556,7 @@ function App() {
           connections={connections}
         />
         
-        <div className="flex flex-1 overflow-hidden">
+        <div className="flex flex-1 overflow-hidden flex-layout">
           {/* Left Sidebar - Resizable */}
           <ResizablePanel
             side="left"
@@ -542,8 +570,8 @@ function App() {
             </div>
           </ResizablePanel>
           
-          {/* Main Canvas */}
-          <div className="relative flex-1">
+          {/* Main Canvas - Ensure it doesn't overflow when properties panel is visible */}
+          <div className={`relative flex-1 min-w-0 canvas-container ${selectedComponent ? 'canvas-with-panel' : ''}`}>
             <Canvas
               components={components}
               connections={connections}
@@ -557,7 +585,45 @@ function App() {
               onAddComponent={addComponent}
               draggedTech={draggedTech || undefined}
               onComponentDoubleClick={handleComponentDoubleClick}
+              onViewProjectStructure={handleViewProjectStructure}
             />
+            
+            {/* Component Selection Indicator */}
+            {selectedComponent && (
+              <div className="absolute top-4 right-4 z-50 bg-blue-600 text-white px-3 py-2 rounded-lg shadow-lg text-sm max-w-xs">
+                <div className="flex items-center space-x-2">
+                  <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+                  <div>
+                    <div className="font-medium">Component Selected</div>
+                    <div className="text-xs opacity-90">
+                      Properties panel should be visible on the right side
+                    </div>
+                    <div className="text-xs opacity-75 mt-1">
+                      Press 'P' key or use the floating button below
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {/* Floating Properties Panel Button */}
+            {selectedComponent && (
+              <div className="absolute bottom-4 right-4 z-50">
+                <button
+                  onClick={() => {
+                    // Ensure properties panel is visible by scrolling to it
+                    const propertiesPanel = document.querySelector('[data-properties-panel]');
+                    if (propertiesPanel) {
+                      propertiesPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    }
+                  }}
+                  className="bg-green-600 hover:bg-green-700 text-white p-3 rounded-full shadow-lg transition-all duration-200 hover:scale-110"
+                  title="Open Properties Panel (Press 'P' key)"
+                >
+                  <Settings className="w-5 h-5" />
+                </button>
+              </div>
+            )}
           </div>
           
           {/* Right Panel - Resizable, only show when component is selected */}
@@ -569,7 +635,7 @@ function App() {
               maxWidth={600}
               onResize={handlePropertiesPanelResize}
             >
-              <div className="h-full bg-white border-l border-gray-200 overflow-y-auto">
+              <div className="h-full bg-white border-l border-gray-200 overflow-y-auto properties-panel-visible" data-properties-panel>
                 <PropertiesPanel
                   selectedComponent={selectedComponent}
                   onComponentUpdate={updateComponent}
@@ -581,6 +647,8 @@ function App() {
                   showProjectPreview={showProjectPreview}
                   setShowProjectPreview={setShowProjectPreview}
                   previewComponent={previewComponent}
+                  isPopupMode={isPropertiesPanelPopup}
+                  setIsPopupMode={handlePropertiesPanelPopupToggle}
                 />
               </div>
             </ResizablePanel>
