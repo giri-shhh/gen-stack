@@ -9,6 +9,7 @@ import Sidebar from './components/Sidebar';
 import PropertiesPanel from './components/PropertiesPanelModular';
 import ResizablePanel from './components/ResizablePanel';
 import AuthModal from './components/AuthModal';
+import GetStartedModal from './components/GetStartedModal';
 import Header from './components/Header';
 import Toast from './components/Toast';
 import { useCanvasState } from './hooks/useCanvasState';
@@ -37,6 +38,7 @@ function App() {
   const [showLanding, setShowLanding] = useState(true);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<'signin' | 'signup'>('signin');
+  const [getStartedModalOpen, setGetStartedModalOpen] = useState(false);
   const [currentProject, setCurrentProject] = useState<Project | null>(null);
   const [toast, setToast] = useState<ToastType | null>(null);
   const [dashboardKey, setDashboardKey] = useState(0);
@@ -210,13 +212,41 @@ function App() {
   // Event handlers
   const handleGetStarted = () => {
     if (!user) {
-      // If no user is logged in, open the sign up modal
-      setAuthModalMode('signup');
-      setAuthModalOpen(true);
+      // If no user is logged in, show the get started modal with options
+      setGetStartedModalOpen(true);
     } else {
       setShowLanding(false);
       setShowDashboard(true);
     }
+  };
+
+  const handleContinueAsTemp = () => {
+    // Generate a random name for temporary user
+    const adjectives = ['Creative', 'Innovative', 'Dynamic', 'Brilliant', 'Curious', 'Adventurous', 'Bold', 'Clever', 'Energetic', 'Inspiring'];
+    const nouns = ['Developer', 'Creator', 'Builder', 'Designer', 'Architect', 'Explorer', 'Innovator', 'Maker', 'Visionary', 'Pioneer'];
+    const randomAdjective = adjectives[Math.floor(Math.random() * adjectives.length)];
+    const randomNoun = nouns[Math.floor(Math.random() * nouns.length)];
+    const randomName = `${randomAdjective} ${randomNoun}`;
+    
+    // Create a temporary user
+    const tempUser: User = {
+      id: `temp_${Date.now()}`,
+      name: randomName,
+      email: '', // No email for temporary users
+      avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(randomName)}&background=6366f1&color=fff`,
+      isTemporary: true
+    };
+    
+    setUser(tempUser);
+    setGetStartedModalOpen(false);
+    setShowLanding(false);
+    setShowDashboard(true);
+  };
+
+  const handleGetStartedSignUp = () => {
+    setGetStartedModalOpen(false);
+    setAuthModalMode('signup');
+    setAuthModalOpen(true);
   };
 
   const handleBackToLanding = () => {
@@ -457,12 +487,12 @@ function App() {
             type: techId,
             techId: techId,
             position: {
-              x: centerX - 75, // Center the component
-              y: centerY - 50
+              x: centerX - 100, // Center the component (200/2)
+              y: centerY - 70   // Center the component (140/2)
             },
             size: {
-              width: 150,
-              height: 100
+              width: 200,
+              height: 140
             },
             properties: {
               name: tech.name,
@@ -511,6 +541,12 @@ function App() {
           onGetStarted={handleGetStarted}
           onSignIn={handleOpenSignIn}
           onSignUp={handleOpenSignUp}
+        />
+        <GetStartedModal
+          isOpen={getStartedModalOpen}
+          onClose={() => setGetStartedModalOpen(false)}
+          onSignUp={handleGetStartedSignUp}
+          onContinueAsTemp={handleContinueAsTemp}
         />
         {authModalOpen && (
           <AuthModal
@@ -566,7 +602,16 @@ function App() {
             onResize={handleSidebarResize}
           >
             <div className="h-full bg-white border-r border-gray-200 overflow-y-auto">
-              <Sidebar />
+              <Sidebar 
+                currentProject={currentProject || undefined}
+                onProjectUpdate={(updates) => {
+                  if (currentProject) {
+                    const updatedProject = { ...currentProject, ...updates };
+                    setCurrentProject(updatedProject);
+                    // Update localStorage or backend here if needed
+                  }
+                }}
+              />
             </div>
           </ResizablePanel>
           
@@ -588,23 +633,7 @@ function App() {
               onViewProjectStructure={handleViewProjectStructure}
             />
             
-            {/* Component Selection Indicator */}
-            {selectedComponent && (
-              <div className="absolute top-4 right-4 z-50 bg-blue-600 text-white px-3 py-2 rounded-lg shadow-lg text-sm max-w-xs">
-                <div className="flex items-center space-x-2">
-                  <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
-                  <div>
-                    <div className="font-medium">Component Selected</div>
-                    <div className="text-xs opacity-90">
-                      Properties panel should be visible on the right side
-                    </div>
-                    <div className="text-xs opacity-75 mt-1">
-                      Press 'P' key or use the floating button below
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
+
             
             {/* Floating Properties Panel Button */}
             {selectedComponent && (

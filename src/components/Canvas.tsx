@@ -70,10 +70,30 @@ const Canvas: React.FC<CanvasProps> = React.memo(({
 
   // Handle pan start
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    if (e.button === 1 || (e.button === 0 && e.altKey)) { // Middle mouse or Alt+Left
-      e.preventDefault();
-      setIsPanning(true);
-      setPanStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
+    const target = e.target as HTMLElement;
+    
+    // Check if clicking on a component or component-related element
+    const isClickingOnComponent = target.closest('[data-canvas-component]') || 
+                                 target.closest('.resize-handle') ||
+                                 target.closest('[data-component-button]');
+    
+    // Allow panning in these cases:
+    // 1. Middle mouse (always)
+    // 2. Alt + Left click (always)
+    // 3. Left click when not clicking on a component (even if one is selected)
+    const canPan = e.button === 1 || 
+                   (e.button === 0 && e.altKey) || 
+                   (e.button === 0 && !isClickingOnComponent);
+    
+    if (canPan) {
+      const isCanvasBackground = target === canvasRef.current || target.closest('.canvas-background');
+      
+      // Start panning if clicking on background or using force methods (middle/alt)
+      if (isCanvasBackground || e.button === 1 || e.altKey || !isClickingOnComponent) {
+        e.preventDefault();
+        setIsPanning(true);
+        setPanStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
+      }
     }
   }, [pan]);
 
@@ -133,7 +153,10 @@ const Canvas: React.FC<CanvasProps> = React.memo(({
   }, [isPanning, handleMouseMove, handleMouseUp]);
 
   const handleCanvasClick = useCallback((e: React.MouseEvent) => {
-    if (e.target === canvasRef.current) {
+    const target = e.target as HTMLElement;
+    const isCanvasBackground = target === canvasRef.current || target.closest('.canvas-background');
+    
+    if (isCanvasBackground && !isPanning) {
       onCanvasClick();
       // Cancel connection mode if clicking on empty canvas
       if (isConnecting) {
@@ -141,7 +164,7 @@ const Canvas: React.FC<CanvasProps> = React.memo(({
         setConnectionStart(null);
       }
     }
-  }, [onCanvasClick, isConnecting]);
+  }, [onCanvasClick, isConnecting, isPanning]);
 
   const handleComponentClick = useCallback((component: any) => {
     console.log('Canvas: Component clicked:', component);
@@ -184,10 +207,21 @@ const Canvas: React.FC<CanvasProps> = React.memo(({
 
   // Memoize canvas class name
   const canvasClassName = useMemo(() => {
+    let cursor = 'cursor-default';
+    
+    if (isPanning) {
+      cursor = 'cursor-grabbing';
+    } else if (isConnecting) {
+      cursor = 'cursor-crosshair';
+    } else {
+      // Always show grab cursor on canvas background - user can always pan by dragging empty areas
+      cursor = 'cursor-grab';
+    }
+    
     return `h-full w-full relative canvas-grid overflow-hidden transition-colors duration-200 ${
       isOver && draggedTech ? 'bg-blue-50' : ''
-    } ${isPanning ? 'cursor-grabbing' : 'cursor-grab'}`;
-  }, [isOver, draggedTech, isPanning]);
+    } ${cursor}`;
+  }, [isOver, draggedTech, isPanning, isConnecting]);
 
   // Drop indicator is now handled by DndKit's isOver state
 
@@ -247,7 +281,10 @@ const Canvas: React.FC<CanvasProps> = React.memo(({
           <div className="text-xs text-gray-600">
             <div className="font-medium mb-1">Navigation:</div>
             <div>• Ctrl/Cmd + Scroll to zoom</div>
-            <div>• Alt + Drag to pan</div>
+            <div>• Drag empty areas to pan</div>
+            <div>• Click to select components</div>
+            <div>• Drag selected components to move</div>
+            <div>• Alt + Drag to force pan</div>
             <div>• Middle mouse to pan</div>
           </div>
         </div>
@@ -255,7 +292,7 @@ const Canvas: React.FC<CanvasProps> = React.memo(({
 
       <div 
         ref={canvasRef} 
-        className="relative w-full h-full min-h-[600px] min-w-[800px] transition-transform duration-200"
+        className="canvas-background relative w-full h-full min-h-[600px] min-w-[800px] transition-transform duration-200"
         style={canvasTransformStyle}
       >
         {/* Connection Lines */}
@@ -335,7 +372,7 @@ const Canvas: React.FC<CanvasProps> = React.memo(({
         {components.length === 0 && !isOver && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
             <div className="bg-white bg-opacity-95 border-2 border-dashed border-gray-300 rounded-lg p-12 text-center max-w-md">
-              <div className="text-gray-600 text-lg font-medium mb-4">Welcome to Fullstack App Generator</div>
+              <div className="text-gray-600 text-lg font-medium mb-4">Welcome to Fullstack Gen</div>
               <div className="text-gray-500 text-sm space-y-2">
                 <p>🎯 <strong>Get Started:</strong> Drag components from the left sidebar to build your architecture</p>
                 <p>🔗 <strong>Connect:</strong> Click the link icon on components to create connections</p>

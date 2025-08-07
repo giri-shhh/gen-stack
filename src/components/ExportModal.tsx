@@ -32,7 +32,7 @@ const ExportModal: React.FC<ExportModalProps> = ({
   const [gitSettings, setGitSettings] = useState({
     repositoryUrl: '',
     branch: 'main',
-    commitMessage: 'Initial commit from Fullstack App Generator',
+    commitMessage: 'Initial commit from Fullstack Gen',
     isPrivate: true
   });
 
@@ -375,7 +375,7 @@ const ExportModal: React.FC<ExportModalProps> = ({
 
     return `# ${projectName}
 
-A fullstack application generated with Fullstack App Generator.
+A fullstack application generated with Fullstack Gen.
 
 ## Technology Stack
 
@@ -428,7 +428,7 @@ For more information about the scripts, see \`scripts/README.md\`.
 
 ## Project Structure
 
-This project was generated using the Fullstack App Generator, which creates a complete application architecture based on your selected components and their configurations.
+This project was generated using the Fullstack Gen, which creates a complete application architecture based on your selected components and their configurations.
 
 ## Contributing
 
@@ -471,7 +471,7 @@ This project is licensed under the MIT License.
     return {
       name: projectName,
       version: '1.0.0',
-      description: 'A fullstack application generated with Fullstack App Generator',
+      description: 'A fullstack application generated with Fullstack Gen',
       main: 'index.js',
       scripts: {
         start: 'node index.js',
@@ -1113,7 +1113,7 @@ import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
   title: '${projectName}',
-  description: 'Generated with Fullstack App Generator',
+            description: 'Generated with Fullstack Gen',
 }
 
 export default function RootLayout({
@@ -1132,7 +1132,7 @@ export default function RootLayout({
     <main className="flex min-h-screen flex-col items-center justify-between p-24">
       <div className="z-10 max-w-5xl w-full items-center justify-between font-mono text-sm lg:flex">
         <h1 className="text-4xl font-bold">Welcome to ${projectName}</h1>
-        <p className="text-xl">Generated with Fullstack App Generator</p>
+        <p className="text-xl">Generated with Fullstack Gen</p>
       </div>
     </main>
   )
@@ -1210,7 +1210,7 @@ yarn-error.log*`;
   const generateManifestJson = () => {
     return `{
   "short_name": "${projectName}",
-  "name": "${projectName} - Generated with Fullstack App Generator",
+        "name": "${projectName} - Generated with Fullstack Gen",
   "icons": [
     {
       "src": "favicon.ico",
@@ -1410,7 +1410,7 @@ function startServer(projectPath, port) {
 
 // Main function
 async function main() {
-  log('🚀 Fullstack App Generator - Build and Run Script', 'bright');
+      log('🚀 Fullstack Gen - Build and Run Script', 'bright');
   log('================================================', 'bright');
   
   // Step 1: Find all projects
@@ -1542,7 +1542,7 @@ if (require.main === module) {
 module.exports = { main, installDependencies, startServer, openUrl };`;
 
     // PowerShell script (Windows)
-    const powershellScript = `# Fullstack App Generator - Build and Run Script (PowerShell)
+    const powershellScript = `# Fullstack Gen - Build and Run Script (PowerShell)
 # This script builds the main application, finds generated projects, installs dependencies, and starts servers
 
 param(
@@ -1726,7 +1726,7 @@ function Start-ProjectServer {
 
 # Main function
 function Main {
-    Write-ColorOutput "🚀 Fullstack App Generator - Build and Run Script" "Magenta"
+    Write-ColorOutput "🚀 Fullstack Gen - Build and Run Script" "Magenta"
     Write-ColorOutput "================================================" "Magenta"
     
     # Check prerequisites
@@ -1889,11 +1889,11 @@ catch {
     const batchScript = `@echo off
 setlocal enabledelayedexpansion
 
-REM Fullstack App Generator - Build and Run Script (Batch)
+REM Fullstack Gen - Build and Run Script (Batch)
 REM This script helps run generated projects
 
 echo.
-echo 🚀 Fullstack App Generator - Build and Run Script
+echo 🚀 Fullstack Gen - Build and Run Script
 echo ================================================
 echo.
 

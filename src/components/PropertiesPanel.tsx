@@ -1692,7 +1692,7 @@ const PropertiesPanel = ({
           type: 'file',
           content: `# ${projectName}
 
-This project was generated using the Fullstack App Generator.
+This project was generated using the Fullstack Gen.
 
 ## Technology Stack
 - ${currentTech?.name || 'Unknown Technology'}

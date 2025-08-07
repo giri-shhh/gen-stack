@@ -76,7 +76,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, mode = 'signin', onClose,
             {authMode === 'signup' ? 'Create Account' : 'Welcome Back'}
           </h2>
           <p className="text-gray-600">
-            {authMode === 'signup' ? 'Sign up to start building amazing apps' : 'Sign in to continue to Fullstack App Generator'}
+            {authMode === 'signup' ? 'Sign up to start building amazing apps' : 'Sign in to continue to Fullstack Gen'}
           </p>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">

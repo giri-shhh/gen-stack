@@ -18,14 +18,6 @@ const CanvasComponent: React.FC<CanvasComponentProps> = React.memo(({
   onConnectionEnd,
   zoom = 1
 }) => {
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
-    id: component.id,
-    data: {
-      type: 'canvas-component',
-      component
-    }
-  });
-
   const [isResizing, setIsResizing] = useState(false);
   const [dragStartPos, setDragStartPos] = useState<{ x: number; y: number } | null>(null);
   const [resizeStartSize, setResizeStartSize] = useState<{ width: number; height: number } | null>(null);
@@ -34,6 +26,15 @@ const CanvasComponent: React.FC<CanvasComponentProps> = React.memo(({
   // Track clicks for custom double-click detection
   const [clickCount, setClickCount] = useState(0);
   const [clickTimeout, setClickTimeout] = useState<NodeJS.Timeout | null>(null);
+
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id: component.id,
+    data: {
+      type: 'canvas-component',
+      component
+    },
+    disabled: !isSelected || isResizing // Only allow dragging when component is selected and not resizing
+  });
 
   // Set justPlaced to true when drag ends
   useEffect(() => {
@@ -58,8 +59,8 @@ const CanvasComponent: React.FC<CanvasComponentProps> = React.memo(({
       return {
         left: 0,
         top: 0,
-        width: 150,
-        height: 100,
+        width: 200,
+        height: 140,
         transform: `scale(${zoom})`,
         transformOrigin: '0 0',
         willChange: 'transform', // Optimize for animations
@@ -76,7 +77,7 @@ const CanvasComponent: React.FC<CanvasComponentProps> = React.memo(({
       willChange: 'transform', // Optimize for animations
     };
 
-    if (transform) {
+    if (transform && !isResizing) {
       return {
         ...baseStyle,
         transform: `translate3d(${transform.x}px, ${transform.y}px, 0) scale(${zoom})`,
@@ -88,27 +89,51 @@ const CanvasComponent: React.FC<CanvasComponentProps> = React.memo(({
     }
 
     return baseStyle;
-  }, [component.position.x, component.position.y, component.size.width, component.size.height, transform, zoom]);
+  }, [component.position.x, component.position.y, component.size.width, component.size.height, transform, zoom, isResizing]);
 
   // Optimized className calculation with better performance
   const className = useMemo(() => {
-    const classes = ['canvas-component', 'hover:shadow-lg', 'transition-all', 'duration-200'];
+    const classes = [
+      'canvas-component', 
+      'absolute', 
+      'bg-white', 
+      'border-2', 
+      'border-gray-200', 
+      'rounded-xl', 
+      'shadow-md', 
+      'hover:shadow-xl', 
+      'transition-all', 
+      'duration-200',
+      'flex',
+      'flex-col',
+      'overflow-hidden'
+    ];
+    
+    // Cursor styles based on state
+    if (isDragging) {
+      classes.push('cursor-grabbing');
+    } else if (isSelected) {
+      classes.push('cursor-grab'); // Show grab cursor when selected (draggable)
+    } else {
+      classes.push('cursor-pointer'); // Show pointer cursor when not selected (clickable to select)
+    }
+    
     if (justPlaced) {
       classes.push('ring-4', 'ring-yellow-400', 'animate-pulse');
     }
     if (isSelected) {
-      classes.push('selected', 'ring-4', 'ring-blue-500');
+      classes.push('selected', 'ring-4', 'ring-blue-400', 'ring-opacity-75', 'border-blue-400', 'bg-gradient-to-br', 'from-blue-50', 'to-indigo-50', 'shadow-xl', 'shadow-blue-200/50');
     }
     if (isConnectionStart) {
-      classes.push('ring-2', 'ring-green-500');
+      classes.push('ring-2', 'ring-green-500', 'border-green-300');
     } else if (isConnecting) {
-      classes.push('ring-2', 'ring-blue-300', 'cursor-pointer');
+      classes.push('ring-2', 'ring-blue-300', 'border-blue-200');
     }
     if (isDragging) {
       classes.push('shadow-2xl', 'scale-105', 'rotate-1', 'z-50');
     }
     if (isResizing) {
-      classes.push('resizing');
+      classes.push('resizing', 'ring-2', 'ring-purple-400');
     }
     return classes.join(' ');
   }, [isSelected, isConnectionStart, isConnecting, isDragging, isResizing, justPlaced]);
@@ -121,8 +146,8 @@ const CanvasComponent: React.FC<CanvasComponentProps> = React.memo(({
         const deltaX = (e.clientX - dragStartPos.x) / zoom;
         const deltaY = (e.clientY - dragStartPos.y) / zoom;
         
-        const newWidth = Math.max(120, resizeStartSize.width + deltaX);
-        const newHeight = Math.max(80, resizeStartSize.height + deltaY);
+        const newWidth = Math.max(160, resizeStartSize.width + deltaX);
+        const newHeight = Math.max(120, resizeStartSize.height + deltaY);
         
         // Snap resize to grid (using 25 as default grid size)
         const gridSize = 25;
@@ -146,8 +171,8 @@ const CanvasComponent: React.FC<CanvasComponentProps> = React.memo(({
       setIsResizing(true);
       setDragStartPos({ x: e.clientX, y: e.clientY });
       setResizeStartSize({ 
-        width: component.size?.width || 150, 
-        height: component.size?.height || 100 
+        width: component.size?.width || 200, 
+        height: component.size?.height || 140 
       });
     }
   }, [component.size?.width, component.size?.height]);
@@ -257,51 +282,103 @@ const CanvasComponent: React.FC<CanvasComponentProps> = React.memo(({
       className={className}
       onClick={handleClick}
       onMouseDown={handleMouseDown}
+      data-canvas-component="true"
+      {...attributes}
+      {...(isSelected && !isResizing ? listeners : {})}
     >
       {/* Component Header */}
-      <div className="flex items-center justify-between mb-3">
-      <div className="flex items-center space-x-3 flex-1 min-w-0">
-        <div 
-          className="w-4 h-4 rounded-full flex-shrink-0 shadow-sm"
-          style={{ backgroundColor: justPlaced ? '#facc15' : (tech?.color || '#6B7280') }}
-        />
-        <span className="text-sm font-semibold text-gray-900 truncate">
-          {component.properties?.name || tech?.name || 'Component'}
-        </span>
-      </div>
+      <div className={`flex items-center justify-between mb-3 px-3 py-2 ${
+        isSelected ? 'bg-gradient-to-r from-blue-100 to-indigo-100 border-b border-blue-200' : ''
+      }`}>
+        <div className="flex items-center space-x-3 flex-1 min-w-0">
+          <div 
+            className={`w-4 h-4 rounded-full flex-shrink-0 shadow-sm transition-all duration-200 ${
+              isSelected ? 'ring-2 ring-blue-300 ring-opacity-50' : ''
+            }`}
+            style={{ backgroundColor: justPlaced ? '#facc15' : (tech?.color || '#6B7280') }}
+          />
+          <span className={`text-sm font-semibold truncate transition-colors duration-200 ${
+            isSelected ? 'text-blue-900' : 'text-gray-900'
+          }`}>
+            {component.properties?.name || tech?.name || 'Component'}
+          </span>
+          {isSelected && (
+            <div className="flex items-center space-x-1">
+              <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse"></div>
+              <span className="text-xs text-blue-600 font-medium">Selected</span>
+            </div>
+          )}
+        </div>
         
         {isSelected && (
-          <div className="flex items-center space-x-1">
+          <div className="flex items-center space-x-2 relative z-30">
             <button
               onClick={handleConnectionClick}
-              className={`p-1 rounded hover:bg-gray-100 transition-colors ${
-                isConnecting ? 'bg-blue-100 text-blue-600' : 'text-gray-500'
+              onMouseDown={(e) => e.stopPropagation()}
+              className={`p-2 rounded-lg transition-all duration-200 shadow-sm hover:shadow-md relative z-40 ${
+                isConnecting 
+                  ? 'bg-blue-500 text-white hover:bg-blue-600' 
+                  : 'bg-white text-blue-600 hover:bg-blue-50 border border-blue-200'
               }`}
               title={isConnecting ? "Click to connect to this component" : "Start connection from this component"}
+              data-component-button="true"
             >
-              <Link className="w-3 h-3" />
+              <Link className="w-4 h-4" />
             </button>
             <button
               onClick={handleRemove}
-              className="p-1 rounded hover:bg-red-100 text-gray-500 hover:text-red-600 transition-colors"
+              onMouseDown={(e) => e.stopPropagation()}
+              className="p-2 rounded-lg bg-white text-red-500 hover:bg-red-50 border border-red-200 transition-all duration-200 shadow-sm hover:shadow-md hover:text-red-600 relative z-40"
               title="Remove component"
+              data-component-button="true"
             >
-              <X className="w-3 h-3" />
+              <X className="w-4 h-4" />
             </button>
           </div>
         )}
       </div>
 
       {/* Component Content */}
-      <div className="flex-1 flex items-center justify-center">
+      <div className="flex-1 flex flex-col items-center justify-center p-3 relative">
+        {/* Technology Icon */}
+        <div className={`mb-3 transition-all duration-200 ${
+          isSelected ? 'transform scale-110' : ''
+        }`}>
+          {tech?.logo ? (
+            <div className={`p-3 rounded-xl shadow-lg transition-all duration-200 ${
+              isSelected 
+                ? 'bg-gradient-to-br from-blue-600 to-indigo-700 shadow-xl ring-4 ring-blue-200 ring-opacity-50' 
+                : 'bg-gradient-to-br from-blue-500 to-indigo-600'
+            }`}>
+              <tech.logo className="w-8 h-8 text-white" />
+            </div>
+          ) : (
+            <div 
+              className={`w-14 h-14 rounded-xl shadow-lg flex items-center justify-center transition-all duration-200 ${
+                isSelected ? 'shadow-xl ring-4 ring-blue-200 ring-opacity-50' : ''
+              }`}
+              style={{ 
+                backgroundColor: isSelected 
+                  ? `${tech?.color || '#6B7280'}dd` 
+                  : tech?.color || '#6B7280' 
+              }}
+            >
+              <span className="text-white text-lg font-bold">
+                {tech?.name?.charAt(0) || 'C'}
+              </span>
+            </div>
+          )}
+        </div>
+        
+        {/* Technology Name and Description */}
         <div className="text-center">
-          <div className="text-lg font-semibold text-gray-800 mb-1">{tech?.name}</div>
-          <div className="text-xs text-gray-500 capitalize">{tech?.description}</div>
-                     {isSelected && (
-             <div className="mt-1 text-xs text-blue-600 opacity-75">
-               Double-click to open properties in full view
-             </div>
-           )}
+          <div className="text-lg font-bold text-gray-800 mb-1 leading-tight">{tech?.name}</div>
+          <div className="text-sm text-gray-600 leading-relaxed px-2">{tech?.description}</div>
+          {isSelected && (
+            <div className="mt-2 px-3 py-1 bg-blue-100 rounded-full text-xs text-blue-700 font-medium border border-blue-200 animate-pulse">
+              Double-click for details
+            </div>
+          )}
         </div>
       </div>
 
@@ -392,20 +469,21 @@ const CanvasComponent: React.FC<CanvasComponentProps> = React.memo(({
 
       {/* Enhanced Resize Handle */}
       {isSelected && (
-        <div className="resize-handle absolute bottom-0 right-0 w-6 h-6 cursor-se-resize z-20">
-          <div className="w-full h-full bg-blue-500 rounded-tl-sm opacity-60 hover:opacity-100 transition-opacity flex items-center justify-center">
-            <Maximize2 className="w-3 h-3 text-white" />
+        <div className="resize-handle absolute bottom-0 right-0 w-8 h-8 cursor-se-resize z-30" onMouseDown={handleMouseDown}>
+          <div className="w-full h-full bg-gradient-to-br from-blue-500 to-indigo-600 rounded-tl-lg shadow-lg hover:shadow-xl opacity-80 hover:opacity-100 transition-all duration-200 flex items-center justify-center hover:scale-105 ring-2 ring-blue-200 ring-opacity-50">
+            <Maximize2 className="w-4 h-4 text-white" />
           </div>
           {/* Invisible larger hit area */}
-          <div className="absolute inset-0 w-8 h-8 -top-1 -left-1 cursor-se-resize"></div>
+          <div className="absolute inset-0 w-10 h-10 -top-1 -left-1 cursor-se-resize" onMouseDown={handleMouseDown}></div>
         </div>
       )}
 
-      {/* Resize Corner Indicators */}
+      {/* Enhanced Corner Indicators */}
       {isSelected && (
         <>
-          <div className="absolute bottom-0 left-0 w-2 h-2 bg-blue-500 opacity-50"></div>
-          <div className="absolute top-0 right-0 w-2 h-2 bg-blue-500 opacity-50"></div>
+          <div className="absolute bottom-0 left-0 w-3 h-3 bg-gradient-to-tr from-blue-500 to-indigo-600 rounded-tr-md opacity-60 shadow-sm"></div>
+          <div className="absolute top-0 right-0 w-3 h-3 bg-gradient-to-bl from-blue-500 to-indigo-600 rounded-bl-md opacity-60 shadow-sm"></div>
+          <div className="absolute top-0 left-0 w-3 h-3 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-br-md opacity-60 shadow-sm"></div>
         </>
       )}
 

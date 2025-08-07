@@ -1,11 +1,11 @@
 @echo off
 setlocal enabledelayedexpansion
 
-REM Fullstack App Generator - Build and Run Script (Batch)
+REM Fullstack Gen - Build and Run Script (Batch)
 REM This script builds the main application and helps run generated projects
 
 echo.
-echo 🚀 Fullstack App Generator - Build and Run Script
+echo 🚀 Fullstack Gen - Build and Run Script
 echo ================================================
 echo.
 

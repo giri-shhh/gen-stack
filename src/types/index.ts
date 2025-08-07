@@ -4,6 +4,7 @@ export interface User {
   name: string;
   email: string;
   avatar: string;
+  isTemporary?: boolean;
 }
 
 // Project types
@@ -15,6 +16,16 @@ export interface Project {
   technologies: string[];
   status: 'active' | 'completed' | 'archived' | 'draft';
   canvasState?: CanvasState;
+  createdAt?: string;
+  author?: string;
+  version?: string;
+  deploymentUrl?: string;
+  repository?: string;
+  components?: number;
+  connections?: number;
+  isPublic?: boolean;
+  isFavorite?: boolean;
+  tags?: string[];
 }
 
 // Canvas component types
@@ -183,6 +194,13 @@ export interface LandingPageProps {
   onGetStarted: () => void;
   onSignIn: () => void;
   onSignUp: () => void;
+}
+
+export interface GetStartedModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSignUp: () => void;
+  onContinueAsTemp: () => void;
 }
 
 export interface ToastProps {

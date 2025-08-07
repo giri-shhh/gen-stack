@@ -1,4 +1,4 @@
-# Fullstack App Generator - Build and Run Script (PowerShell)
+# Fullstack Gen - Build and Run Script (PowerShell)
 # This script builds the main application, finds generated projects, installs dependencies, and starts servers
 
 param(
@@ -184,7 +184,7 @@ function Start-ProjectServer {
 
 # Main function
 function Main {
-    Write-ColorOutput "🚀 Fullstack App Generator - Build and Run Script" "Magenta"
+    Write-ColorOutput "🚀 Fullstack Gen - Build and Run Script" "Magenta"
     Write-ColorOutput "================================================" "Magenta"
     
     # Check prerequisites

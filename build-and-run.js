@@ -174,7 +174,7 @@ function startServer(projectPath, port) {
 
 // Main function
 async function main() {
-  log('🚀 Fullstack App Generator - Build and Run Script', 'bright');
+  log('🚀 Fullstack Gen - Build and Run Script', 'bright');
   log('================================================', 'bright');
   
   // Step 1: Build the main application

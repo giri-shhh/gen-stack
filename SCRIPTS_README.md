@@ -52,7 +52,7 @@ build-and-run.bat
 
 ## Usage Workflow
 
-1. **Export** a project from the Fullstack App Generator
+1. **Export** a project from the Fullstack Gen
 2. **Extract** the ZIP file to Downloads or projects folder
 3. **Run** the script:
    ```bash

@@ -257,4 +257,87 @@
     flex: 1;
     min-width: 0;
   }
+  
+  /* Properties Panel Optimizations */
+  .properties-panel-visible {
+    min-width: 280px;
+    max-width: 600px;
+  }
+  
+  .properties-panel-visible .space-y-6 > * + * {
+    margin-top: 1rem;
+  }
+  
+  .properties-panel-visible .space-y-4 > * + * {
+    margin-top: 0.75rem;
+  }
+  
+  .properties-panel-visible .space-y-3 > * + * {
+    margin-top: 0.5rem;
+  }
+}
+
+/* Landing Page Animations */
+@keyframes blob {
+  0% {
+    transform: translate(0px, 0px) scale(1);
+  }
+  33% {
+    transform: translate(30px, -50px) scale(1.1);
+  }
+  66% {
+    transform: translate(-20px, 20px) scale(0.9);
+  }
+  100% {
+    transform: translate(0px, 0px) scale(1);
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-20px);
+  }
+}
+
+@keyframes gradient-x {
+  0%, 100% {
+    background-size: 200% 200%;
+    background-position: left center;
+  }
+  50% {
+    background-size: 200% 200%;
+    background-position: right center;
+  }
+}
+
+.animate-blob {
+  animation: blob 7s infinite;
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+.animate-gradient-x {
+  animation: gradient-x 3s ease infinite;
+  background-size: 200% 200%;
+}
+
+.animation-delay-1000 {
+  animation-delay: 1s;
+}
+
+.animation-delay-2000 {
+  animation-delay: 2s;
+}
+
+.animation-delay-3000 {
+  animation-delay: 3s;
+}
+
+.animation-delay-4000 {
+  animation-delay: 4s;
 } 
