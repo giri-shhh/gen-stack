@@ -242,22 +242,6 @@
     min-width: 400px;
   }
   
-  /* Ensure proper flex behavior */
-  .flex-layout {
-    display: flex;
-    flex: 1;
-    overflow: hidden;
-  }
-  
-  .flex-layout > * {
-    flex-shrink: 0;
-  }
-  
-  .flex-layout > .canvas-container {
-    flex: 1;
-    min-width: 0;
-  }
-  
   /* Properties Panel Optimizations */
   .properties-panel-visible {
     min-width: 280px;
@@ -266,6 +250,33 @@
   
   .properties-panel-visible .space-y-6 > * + * {
     margin-top: 1rem;
+  }
+  
+  /* Resize handle visibility and interaction */
+  .resize-handle {
+    z-index: 99;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  
+  .resize-handle:hover {
+    z-index: 999;
+    background-color: rgba(59, 130, 246, 0.3) !important;
+  }
+  
+  .resize-handle:active {
+    background-color: rgba(59, 130, 246, 0.5) !important;
+  }
+  
+  /* During resizing state */
+  .resizing {
+    opacity: 0.95;
+  }
+  
+  /* Prevent text selection during resize */
+  body.resizing {
+    user-select: none;
+    -webkit-user-select: none;
   }
   
   .properties-panel-visible .space-y-4 > * + * {

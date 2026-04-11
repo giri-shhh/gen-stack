@@ -36,14 +36,46 @@ const CanvasComponent: React.FC<CanvasComponentProps> = React.memo(({
     disabled: !isSelected || isResizing // Only allow dragging when component is selected and not resizing
   });
 
-  // Set justPlaced to true when drag ends
+  // Track previous dragging state to detect when drag ends
+  const [wasDragging, setWasDragging] = useState(false);
+  const [dragEndTransform, setDragEndTransform] = useState<any>(null);
+
+  // Detect drag end and update position
   useEffect(() => {
-    if (!isDragging && transform && !justPlaced) {
+    // If we were dragging and now we're not, and we have a transform, update the position
+    if (wasDragging && !isDragging && dragEndTransform && isSelected) {
+      const newX = component.position.x + (dragEndTransform.x / zoom);
+      const newY = component.position.y + (dragEndTransform.y / zoom);
+      
+      console.log('Drag ended - updating position:', {
+        old: component.position,
+        new: { x: newX, y: newY },
+        transform: dragEndTransform,
+        zoom
+      });
+
+      // Update the component position
+      onUpdate({
+        position: {
+          x: newX,
+          y: newY
+        }
+      });
+
+      // Visual feedback - highlight when just placed
       setJustPlaced(true);
-      // Remove highlight after 1s
       setTimeout(() => setJustPlaced(false), 1000);
+
+      // Reset the drag end tracking
+      setDragEndTransform(null);
     }
-  }, [isDragging, transform, justPlaced]);
+
+    // Update tracking state
+    setWasDragging(isDragging);
+    if (isDragging && transform) {
+      setDragEndTransform(transform);
+    }
+  }, [isDragging, dragEndTransform, transform, isSelected, component.position, zoom, onUpdate]);
   
   // Memoize tech data to prevent unnecessary lookups
   const tech = useMemo(() => getTechById(component.techId), [component.techId]);
@@ -77,7 +109,8 @@ const CanvasComponent: React.FC<CanvasComponentProps> = React.memo(({
       willChange: 'transform', // Optimize for animations
     };
 
-    if (transform && !isResizing) {
+    // Only apply visual transform while actively dragging
+    if (transform && isDragging) {
       return {
         ...baseStyle,
         transform: `translate3d(${transform.x}px, ${transform.y}px, 0) scale(${zoom})`,
@@ -89,7 +122,7 @@ const CanvasComponent: React.FC<CanvasComponentProps> = React.memo(({
     }
 
     return baseStyle;
-  }, [component.position.x, component.position.y, component.size.width, component.size.height, transform, zoom, isResizing]);
+  }, [component.position.x, component.position.y, component.size.width, component.size.height, transform, zoom, isDragging, isResizing]);
 
   // Optimized className calculation with better performance
   const className = useMemo(() => {
@@ -231,6 +264,7 @@ const CanvasComponent: React.FC<CanvasComponentProps> = React.memo(({
 
   const handleConnectionClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
+    e.preventDefault();
     if (isConnecting) {
       onConnectionEnd();
     } else {
@@ -283,8 +317,6 @@ const CanvasComponent: React.FC<CanvasComponentProps> = React.memo(({
       onClick={handleClick}
       onMouseDown={handleMouseDown}
       data-canvas-component="true"
-      {...attributes}
-      {...(isSelected && !isResizing ? listeners : {})}
     >
       {/* Component Header */}
       <div className={`flex items-center justify-between mb-3 px-3 py-2 ${
@@ -311,26 +343,40 @@ const CanvasComponent: React.FC<CanvasComponentProps> = React.memo(({
         </div>
         
         {isSelected && (
-          <div className="flex items-center space-x-2 relative z-30">
+          <div className="flex items-center space-x-2 relative z-50">
             <button
               onClick={handleConnectionClick}
-              onMouseDown={(e) => e.stopPropagation()}
-              className={`p-2 rounded-lg transition-all duration-200 shadow-sm hover:shadow-md relative z-40 ${
+              onMouseDown={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+              }}
+              onTouchStart={(e) => {
+                e.preventDefault();
+              }}
+              className={`p-2 rounded-lg transition-all duration-200 shadow-sm hover:shadow-md relative z-50 ${
                 isConnecting 
                   ? 'bg-blue-500 text-white hover:bg-blue-600' 
                   : 'bg-white text-blue-600 hover:bg-blue-50 border border-blue-200'
               }`}
               title={isConnecting ? "Click to connect to this component" : "Start connection from this component"}
               data-component-button="true"
+              style={{ pointerEvents: 'auto' }}
             >
               <Link className="w-4 h-4" />
             </button>
             <button
               onClick={handleRemove}
-              onMouseDown={(e) => e.stopPropagation()}
-              className="p-2 rounded-lg bg-white text-red-500 hover:bg-red-50 border border-red-200 transition-all duration-200 shadow-sm hover:shadow-md hover:text-red-600 relative z-40"
+              onMouseDown={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+              }}
+              onTouchStart={(e) => {
+                e.preventDefault();
+              }}
+              className="p-2 rounded-lg bg-white text-red-500 hover:bg-red-50 border border-red-200 transition-all duration-200 shadow-sm hover:shadow-md hover:text-red-600 relative z-50"
               title="Remove component"
               data-component-button="true"
+              style={{ pointerEvents: 'auto' }}
             >
               <X className="w-4 h-4" />
             </button>
@@ -435,16 +481,39 @@ const CanvasComponent: React.FC<CanvasComponentProps> = React.memo(({
         </div>
       )}
 
-      {/* Enhanced Drag Handle */}
+      {/* Draggable Overlay - Allows drag from anywhere on content area */}
+      {isSelected && !isResizing && (
+        <div
+          {...listeners}
+          {...attributes}
+          className="absolute rounded-lg cursor-grab active:cursor-grabbing z-20 transition-all duration-150"
+          style={{
+            pointerEvents: 'auto',
+            backgroundColor: 'transparent',
+            top: '42px', // Below header area (approx 42px)
+            left: 0,
+            right: 0,
+            bottom: 0,
+            // Visual feedback during drag
+            boxShadow: isDragging ? 'inset 0 0 0 2px rgba(59, 130, 246, 0.4)' : 'none',
+          }}
+          title="Drag to move this component anywhere on the canvas"
+        />
+      )}
+
+      {/* Drag Indicator */}
       <div
-        {...listeners}
-        {...attributes}
-        className={`absolute top-1 right-1 p-1 rounded transition-all duration-200 ${
-          isDragging ? 'opacity-100 bg-blue-100' : 'opacity-0 hover:opacity-100'
-        } cursor-move z-10`}
-        title="Drag to move"
+        className={`absolute top-2 right-2 p-1 rounded pointer-events-none transition-all duration-200 z-40 ${
+          isDragging ? 'opacity-100 scale-110' : 'opacity-0'
+        }`}
+        style={{
+          background: isDragging ? 'rgba(59, 130, 246, 0.15)' : 'transparent',
+          borderRadius: '6px',
+        }}
       >
-        <GripVertical className="w-3 h-3 text-gray-400" />
+        <GripVertical className={`w-3 h-3 transition-colors duration-200 ${
+          isDragging ? 'text-blue-600' : 'text-gray-400'
+        }`} />
       </div>
 
       {/* Connection Indicators */}

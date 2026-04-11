@@ -87,179 +87,10 @@ const ConnectionLines: React.FC<ConnectionLinesProps> = ({ connections, componen
     };
   };
 
-  const renderConnection = (connection: any) => {
-    if (!connection || !connection.source || !connection.target) return null;
-    
-    const fromComponent = components.find(c => c.id === connection.source);
-    const toComponent = components.find(c => c.id === connection.target);
-    
-    if (!fromComponent || !toComponent) return null;
-    
-    const fromCenter = getComponentCenter(connection.source);
-    const toCenter = getComponentCenter(connection.target);
-    
-    // Calculate intersection points with component borders
-    const fromIntersection = getIntersectionPoint(toCenter, fromCenter, fromComponent);
-    const toIntersection = getIntersectionPoint(fromCenter, toCenter, toComponent);
-    
-    // Calculate control points for smooth curve
-    const dx = toIntersection.x - fromIntersection.x;
-    const dy = toIntersection.y - fromIntersection.y;
-    // const distance = Math.sqrt(dx * dx + dy * dy);
-    
-    // Adjust control points based on distance
-    // const controlDistance = Math.min(distance * 0.3, 100);
-    
-    const controlPoint1 = {
-      x: fromIntersection.x + dx * 0.3,
-      y: fromIntersection.y + dy * 0.3
-    };
-    
-    const controlPoint2 = {
-      x: toIntersection.x - dx * 0.3,
-      y: toIntersection.y - dy * 0.3
-    };
-    
-    const pathData = `M ${fromIntersection.x} ${fromIntersection.y} C ${controlPoint1.x} ${controlPoint1.y} ${controlPoint2.x} ${controlPoint2.y} ${toIntersection.x} ${toIntersection.y}`;
-    
-    return (
-      <g key={connection.id}>
-        <defs>
-          <marker
-            id={`arrow-${connection.id}`}
-            markerWidth="12"
-            markerHeight="12"
-            refX="10"
-            refY="4"
-            orient="auto"
-            markerUnits="strokeWidth"
-          >
-            <polygon
-              points="0,0 0,8 10,4"
-              fill="#3b82f6"
-              stroke="#1e40af"
-              strokeWidth="1"
-            />
-          </marker>
-          <filter id={`glow-${connection.id}`}>
-            <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
-            <feMerge> 
-              <feMergeNode in="coloredBlur"/>
-              <feMergeNode in="SourceGraphic"/>
-            </feMerge>
-          </filter>
-        </defs>
-        
-        {/* Connection line with glow effect */}
-        <path
-          d={pathData}
-          className="connection-line"
-          stroke="#3b82f6"
-          strokeWidth="2"
-          fill="none"
-          markerEnd={`url(#arrow-${connection.id})`}
-          filter={`url(#glow-${connection.id})`}
-          style={{
-            transition: 'all 0.2s ease-in-out'
-          }}
-        />
-        
-        {/* Connection points at component borders */}
-        <circle
-          cx={fromIntersection.x}
-          cy={fromIntersection.y}
-          r="3"
-          fill="#3b82f6"
-          stroke="#1e40af"
-          strokeWidth="1"
-        />
-        <circle
-          cx={toIntersection.x}
-          cy={toIntersection.y}
-          r="3"
-          fill="#3b82f6"
-          stroke="#1e40af"
-          strokeWidth="1"
-        />
-      </g>
-    );
-  };
-
-  const renderConnectingLine = () => {
-    if (!isConnecting || !connectionStart || !mousePosition) return null;
-    
-    const startComponent = components.find(c => c.id === connectionStart);
-    if (!startComponent) return null;
-    
-    const startCenter = getComponentCenter(connectionStart);
-    
-    // Use the actual mouse position
-    const startIntersection = getIntersectionPoint(mousePosition, startCenter, startComponent);
-    
-    // Calculate control points for a smooth curve
-    const dx = mousePosition.x - startIntersection.x;
-    const dy = mousePosition.y - startIntersection.y;
-    const controlPoint1 = {
-      x: startIntersection.x + dx * 0.3,
-      y: startIntersection.y + dy * 0.3
-    };
-    const controlPoint2 = {
-      x: mousePosition.x - dx * 0.3,
-      y: mousePosition.y - dy * 0.3
-    };
-    const pathData = `M ${startIntersection.x} ${startIntersection.y} C ${controlPoint1.x} ${controlPoint1.y} ${controlPoint2.x} ${controlPoint2.y} ${mousePosition.x} ${mousePosition.y}`;
-    return (
-      <g>
-        <defs>
-          <marker
-            id="connecting-arrow"
-            markerWidth="12"
-            markerHeight="12"
-            refX="10"
-            refY="4"
-            orient="auto"
-            markerUnits="strokeWidth"
-          >
-            <polygon
-              points="0,0 0,8 10,4"
-              fill="#3b82f6"
-              opacity="0.6"
-              stroke="#1e40af"
-              strokeWidth="1"
-            />
-          </marker>
-        </defs>
-        {/* Connecting line with dashed style, now curved */}
-        <path
-          d={pathData}
-          stroke="#3b82f6"
-          strokeWidth="2"
-          fill="none"
-          markerEnd="url(#connecting-arrow)"
-          opacity="0.6"
-          strokeDasharray="8,4"
-          style={{
-            animation: 'dash 1s linear infinite'
-          }}
-        />
-        {/* Connection point at start component border */}
-        <circle
-          cx={startIntersection.x}
-          cy={startIntersection.y}
-          r="3"
-          fill="#3b82f6"
-          stroke="#1e40af"
-          strokeWidth="1"
-          opacity="0.6"
-        />
-      </g>
-    );
-  };
-
   return (
     <svg
       className="absolute top-0 left-0 w-full h-full pointer-events-none"
-      style={{ zIndex: 1 }}
+      style={{ zIndex: 1, transformOrigin: '0 0' }}
     >
       <defs>
         <style>
@@ -271,11 +102,171 @@ const ConnectionLines: React.FC<ConnectionLinesProps> = ({ connections, componen
             }
           `}
         </style>
+        
+        {/* Arrow markers - using userSpaceOnUse for consistent scaling */}
+        <marker
+          id="arrow-default"
+          markerWidth="10"
+          markerHeight="10"
+          refX="9"
+          refY="3"
+          orient="auto"
+          markerUnits="userSpaceOnUse"
+        >
+          <polygon
+            points="0 0, 10 3, 0 6"
+            fill="#3b82f6"
+            stroke="#1e40af"
+            strokeWidth="0.5"
+          />
+        </marker>
+        
+        <marker
+          id="arrow-connecting"
+          markerWidth="10"
+          markerHeight="10"
+          refX="9"
+          refY="3"
+          orient="auto"
+          markerUnits="userSpaceOnUse"
+        >
+          <polygon
+            points="0 0, 10 3, 0 6"
+            fill="#3b82f6"
+            opacity="0.6"
+            stroke="#1e40af"
+            strokeWidth="0.5"
+          />
+        </marker>
       </defs>
-      <g transform={`scale(${zoom})`}>
-        {connections.map(renderConnection)}
-        {renderConnectingLine()}
-      </g>
+      
+      {/* Render all connections */}
+      {connections.map((connection) => {
+        if (!connection || !connection.source || !connection.target) return null;
+        
+        const fromComponent = components.find(c => c.id === connection.source);
+        const toComponent = components.find(c => c.id === connection.target);
+        
+        if (!fromComponent || !toComponent) return null;
+        
+        const fromCenter = {
+          x: fromComponent.position.x + fromComponent.size.width / 2,
+          y: fromComponent.position.y + fromComponent.size.height / 2
+        };
+        const toCenter = {
+          x: toComponent.position.x + toComponent.size.width / 2,
+          y: toComponent.position.y + toComponent.size.height / 2
+        };
+        
+        // Calculate intersection points with component borders
+        const fromIntersection = getIntersectionPoint({ x: toCenter.x, y: toCenter.y }, { x: fromCenter.x, y: fromCenter.y }, fromComponent);
+        const toIntersection = getIntersectionPoint({ x: fromCenter.x, y: fromCenter.y }, { x: toCenter.x, y: toCenter.y }, toComponent);
+        
+        // Calculate control points for smooth curve
+        const dx = toIntersection.x - fromIntersection.x;
+        const dy = toIntersection.y - fromIntersection.y;
+        
+        const controlPoint1 = {
+          x: fromIntersection.x + dx * 0.3,
+          y: fromIntersection.y + dy * 0.3
+        };
+        
+        const controlPoint2 = {
+          x: toIntersection.x - dx * 0.3,
+          y: toIntersection.y - dy * 0.3
+        };
+        
+        const pathData = `M ${fromIntersection.x} ${fromIntersection.y} C ${controlPoint1.x} ${controlPoint1.y} ${controlPoint2.x} ${controlPoint2.y} ${toIntersection.x} ${toIntersection.y}`;
+        
+        return (
+          <g key={connection.id}>
+            {/* Connection line with glow effect */}
+            <path
+              d={pathData}
+              className="connection-line"
+              stroke="#3b82f6"
+              strokeWidth={2 / zoom}
+              fill="none"
+              markerEnd="url(#arrow-default)"
+              style={{
+                transition: 'all 0.2s ease-in-out',
+                filter: `drop-shadow(0 0 2px rgba(59, 130, 246, 0.5))`
+              }}
+            />
+            
+            {/* Connection points at component borders */}
+            <circle
+              cx={fromIntersection.x}
+              cy={fromIntersection.y}
+              r={3 / zoom}
+              fill="#3b82f6"
+              stroke="#1e40af"
+              strokeWidth={1 / zoom}
+            />
+            <circle
+              cx={toIntersection.x}
+              cy={toIntersection.y}
+              r={3 / zoom}
+              fill="#3b82f6"
+              stroke="#1e40af"
+              strokeWidth={1 / zoom}
+            />
+          </g>
+        );
+      })}
+      
+      {/* Render connecting line during connection creation */}
+      {isConnecting && connectionStart && mousePosition && (() => {
+        const startComponent = components.find(c => c.id === connectionStart);
+        if (!startComponent) return null;
+        
+        const startCenter = {
+          x: startComponent.position.x + startComponent.size.width / 2,
+          y: startComponent.position.y + startComponent.size.height / 2
+        };
+        
+        const startIntersection = getIntersectionPoint(mousePosition, startCenter, startComponent);
+        
+        const dx = mousePosition.x - startIntersection.x;
+        const dy = mousePosition.y - startIntersection.y;
+        const controlPoint1 = {
+          x: startIntersection.x + dx * 0.3,
+          y: startIntersection.y + dy * 0.3
+        };
+        const controlPoint2 = {
+          x: mousePosition.x - dx * 0.3,
+          y: mousePosition.y - dy * 0.3
+        };
+        const pathData = `M ${startIntersection.x} ${startIntersection.y} C ${controlPoint1.x} ${controlPoint1.y} ${controlPoint2.x} ${controlPoint2.y} ${mousePosition.x} ${mousePosition.y}`;
+        
+        return (
+          <g>
+            {/* Connecting line with dashed style */}
+            <path
+              d={pathData}
+              stroke="#3b82f6"
+              strokeWidth={2 / zoom}
+              fill="none"
+              markerEnd="url(#arrow-connecting)"
+              opacity="0.6"
+              strokeDasharray={`${8 / zoom},${4 / zoom}`}
+              style={{
+                animation: 'dash 1s linear infinite'
+              }}
+            />
+            {/* Connection point at start component border */}
+            <circle
+              cx={startIntersection.x}
+              cy={startIntersection.y}
+              r={3 / zoom}
+              fill="#3b82f6"
+              stroke="#1e40af"
+              strokeWidth={1 / zoom}
+              opacity="0.6"
+            />
+          </g>
+        );
+      })()}
     </svg>
   );
 };

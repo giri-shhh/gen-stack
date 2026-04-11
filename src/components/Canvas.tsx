@@ -190,16 +190,20 @@ const Canvas: React.FC<CanvasProps> = React.memo(({
   }, []);
 
   const handleConnectionEnd = useCallback((componentId: string) => {
-    if (isConnecting && connectionStart && connectionStart !== componentId) {
-      onConnectionAdd({ 
-        id: `${connectionStart}-${componentId}`, 
-        source: connectionStart, 
-        target: componentId,
-        type: 'connection'
-      });
+    console.log('Connection end - Start:', connectionStart, 'End:', componentId, 'isConnecting:', isConnecting);
+    if (isConnecting && connectionStart) {
+      if (connectionStart !== componentId) {
+        console.log('Creating connection...');
+        onConnectionAdd({ 
+          id: `${connectionStart}-${componentId}`, 
+          source: connectionStart, 
+          target: componentId,
+          type: 'connection'
+        });
+      }
+      setIsConnecting(false);
+      setConnectionStart(null);
     }
-    setIsConnecting(false);
-    setConnectionStart(null);
   }, [isConnecting, connectionStart, onConnectionAdd]);
 
   // DndKit handles all drag and drop logic, so we don't need native handlers
@@ -322,23 +326,33 @@ const Canvas: React.FC<CanvasProps> = React.memo(({
         )}
 
         {/* Canvas Components */}
-        {components.map((component) => (
-          <CanvasComponent
-            key={component.id}
-            component={component}
-            isSelected={selectedComponent?.id === component.id}
-            isConnecting={isConnecting}
-            isConnectionStart={connectionStart === component.id}
-            onSelect={() => handleComponentClick(component)}
-            onUpdate={(updates) => onComponentUpdate(component.id, updates)}
-            onRemove={() => onComponentRemove(component.id)}
-            onConnectionStart={() => handleConnectionStart(component.id)}
-            onConnectionEnd={() => handleConnectionEnd(component.id)}
-            onDoubleClick={() => onComponentDoubleClick?.(component)}
-            onViewProjectStructure={() => onViewProjectStructure?.(component)}
-            zoom={zoom}
-          />
-        ))}
+        {components.map((component) => {
+          const handleDelete = () => {
+            console.log('Deleting component:', component.id);
+            onComponentRemove(component.id);
+          };
+          const handleConnEnd = () => {
+            console.log('Connection end click on:', component.id);
+            handleConnectionEnd(component.id);
+          };
+          return (
+            <CanvasComponent
+              key={component.id}
+              component={component}
+              isSelected={selectedComponent?.id === component.id}
+              isConnecting={isConnecting}
+              isConnectionStart={connectionStart === component.id}
+              onSelect={() => handleComponentClick(component)}
+              onUpdate={(updates) => onComponentUpdate(component.id, updates)}
+              onRemove={handleDelete}
+              onConnectionStart={() => handleConnectionStart(component.id)}
+              onConnectionEnd={handleConnEnd}
+              onDoubleClick={() => onComponentDoubleClick?.(component)}
+              onViewProjectStructure={() => onViewProjectStructure?.(component)}
+              zoom={zoom}
+            />
+          );
+        })}
 
         {/* Connection Mode Indicator */}
         {isConnecting && (

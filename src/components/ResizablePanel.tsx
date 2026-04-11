@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 
 interface ResizablePanelProps {
   children: React.ReactNode;
@@ -21,26 +21,16 @@ const ResizablePanel: React.FC<ResizablePanelProps> = ({
   const [isResizing, setIsResizing] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
   const startXRef = useRef<number>(0);
-  const startWidthRef = useRef<number>(0);
+  const startWidthRef = useRef<number>(width);
+  const isResizingRef = useRef<boolean>(false);
 
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    // Disable resizing on mobile/touch devices
-    if (window.innerWidth < 768 || e.touches) return;
-    
-    console.log('Resize handle clicked:', side, e.clientX);
-    e.preventDefault();
-    e.stopPropagation();
-    setIsResizing(true);
-    startXRef.current = e.clientX;
+  // Update the ref when width changes
+  useEffect(() => {
     startWidthRef.current = width;
-    
-    // Add global event listeners
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
-  }, [width, side]);
+  }, [width]);
 
-  const handleMouseMove = useCallback((e: MouseEvent) => {
-    if (!isResizing) return;
+  const handleMouseMove = (e: MouseEvent) => {
+    if (!isResizingRef.current) return;
 
     const deltaX = e.clientX - startXRef.current;
     const newWidth = side === 'left' 
@@ -54,13 +44,33 @@ const ResizablePanel: React.FC<ResizablePanelProps> = ({
     if (onResize) {
       onResize(clampedWidth);
     }
-  }, [isResizing, side, minWidth, maxWidth, onResize]);
+  };
 
-  const handleMouseUp = useCallback(() => {
+  const handleMouseUp = () => {
+    console.log('Mouse up, stopping resize');
+    isResizingRef.current = false;
     setIsResizing(false);
     document.removeEventListener('mousemove', handleMouseMove);
     document.removeEventListener('mouseup', handleMouseUp);
-  }, [handleMouseMove]);
+  };
+
+  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    // Disable resizing on mobile/touch devices
+    if (window.innerWidth < 768) return;
+    
+    console.log('Resize handle clicked:', side, e.clientX);
+    e.preventDefault();
+    e.stopPropagation();
+    
+    isResizingRef.current = true;
+    setIsResizing(true);
+    startXRef.current = e.clientX;
+    startWidthRef.current = width;
+    
+    // Add global event listeners
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  };
 
   // Cleanup event listeners on unmount
   useEffect(() => {
@@ -68,19 +78,19 @@ const ResizablePanel: React.FC<ResizablePanelProps> = ({
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [handleMouseMove, handleMouseUp]);
+  }, []);
 
   const resizeHandleStyle = {
     position: 'absolute' as const,
     top: 0,
     bottom: 0,
-    width: '6px',
+    width: '12px',
     cursor: 'col-resize' as const,
     backgroundColor: isResizing ? '#3b82f6' : 'transparent',
-    transition: 'background-color 0.2s',
+    transition: isResizing ? 'none' : 'background-color 0.2s',
     zIndex: 9999,
     pointerEvents: 'auto' as const,
-    ...(side === 'left' ? { right: '-3px' } : { left: '-3px' })
+    ...(side === 'left' ? { right: '-6px' } : { left: '-6px' })
   };
 
   const panelStyle = {
@@ -89,7 +99,9 @@ const ResizablePanel: React.FC<ResizablePanelProps> = ({
     maxWidth: `${width}px`,
     position: 'relative' as const,
     flexShrink: 0,
-    pointerEvents: 'auto' as const
+    pointerEvents: 'auto' as const,
+    paddingRight: side === 'right' ? '0px' : undefined,
+    overflow: 'hidden' as const
   };
 
   return (
@@ -98,15 +110,15 @@ const ResizablePanel: React.FC<ResizablePanelProps> = ({
       <div
         style={resizeHandleStyle}
         onMouseDown={handleMouseDown}
-        className="hidden md:block hover:bg-blue-300 hover:bg-opacity-50 group resize-handle"
+        className="group hover:bg-blue-400 hover:bg-opacity-40 resize-handle"
         title={`Drag to resize ${side === 'left' ? 'sidebar' : 'properties panel'}`}
       >
         {/* Visual indicator dots */}
         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity resize-handle-dots">
           <div className="flex flex-col space-y-1">
-            <div className="w-1 h-1 bg-gray-400 rounded-full"></div>
-            <div className="w-1 h-1 bg-gray-400 rounded-full"></div>
-            <div className="w-1 h-1 bg-gray-400 rounded-full"></div>
+            <div className="w-1 h-1 bg-gray-500 rounded-full"></div>
+            <div className="w-1 h-1 bg-gray-500 rounded-full"></div>
+            <div className="w-1 h-1 bg-gray-500 rounded-full"></div>
           </div>
         </div>
       </div>

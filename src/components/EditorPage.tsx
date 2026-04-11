@@ -9,7 +9,6 @@ import PropertiesPanel from './PropertiesPanelModular';
 import ResizablePanel from './ResizablePanel';
 import Header from './Header';
 import Toast from './Toast';
-import EditorMenuBar from './EditorMenuBar';
 import ExportModal from './ExportModal';
 import { useCanvasState } from '../hooks/useCanvasState';
 import { getTechById } from '../data/techStack';
@@ -134,6 +133,15 @@ export default function EditorPage({ user, currentProject, setCurrentProject, on
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [currentProject, selectedComponent]);
+
+  // Handle clone event from Header
+  useEffect(() => {
+    const handleClone = () => {
+      handleCloneProject();
+    };
+    window.addEventListener('clone-project', handleClone);
+    return () => window.removeEventListener('clone-project', handleClone);
+  }, []);
 
   // Migration function to convert old component structure to new format
   const migrateComponentStructure = (component: any): CanvasComponent => {
@@ -361,6 +369,8 @@ export default function EditorPage({ user, currentProject, setCurrentProject, on
 
   const handleDragEnd = (event: any) => {
     const { active, over } = event;
+    
+    // Handle tech items being dragged from sidebar to canvas
     if (over && over.id === 'canvas' && active.id.startsWith('tech-')) {
       const techId = active.id.replace('tech-', '');
       const tech = getTechById(techId);
@@ -381,17 +391,10 @@ export default function EditorPage({ user, currentProject, setCurrentProject, on
           addComponent(newComponent);
         }
       }
-    } else if (over && over.id === 'canvas' && active.data?.current?.type === 'canvas-component') {
-      const component = active.data.current.component;
-      if (event.delta) {
-        updateComponent(component.id, {
-          position: {
-            x: component.position.x + event.delta.x,
-            y: component.position.y + event.delta.y
-          }
-        });
-      }
     }
+    // NOTE: Canvas component position updates are now handled by CanvasComponent's useEffect
+    // when isDragging state changes, so we don't need to handle it here
+    
     setDraggedTech(null);
     setDragOverlayContent(null);
   };
@@ -435,19 +438,6 @@ export default function EditorPage({ user, currentProject, setCurrentProject, on
             connections={connections}
           />
           
-          {currentProject && (
-            <EditorMenuBar
-              project={currentProject}
-              components={components}
-              connections={connections}
-              onSave={handleSaveProject}
-              onClone={handleCloneProject}
-              onExport={() => setShowExportModal(true)}
-              onDelete={handleDeleteCurrentProject}
-              isSaving={false}
-            />
-          )}
-          
           {/* Mobile Panel Selector */}
           {isMobile && (
             <div className="flex border-b border-gray-200 bg-white gap-1 p-1 overflow-x-auto">
@@ -485,7 +475,7 @@ export default function EditorPage({ user, currentProject, setCurrentProject, on
               )}
             </div>
           )}
-          <div className="flex flex-1 overflow-hidden flex-layout">
+          <div className="flex flex-1 overflow-hidden gap-0" style={{ minWidth: 0 }}>
             {/* Sidebar - Hide on mobile or show based on panel selection */}
             {(!isMobile || mobilePanel === 'sidebar') && (
               <ResizablePanel
@@ -510,7 +500,7 @@ export default function EditorPage({ user, currentProject, setCurrentProject, on
             
             {/* Canvas - Hide on mobile or show based on panel selection */}
             {(!isMobile || mobilePanel === 'canvas') && (
-              <div className="relative flex-1 min-w-0 canvas-container">
+              <div className="relative flex-1" style={{ minWidth: 0, display: 'flex', flexDirection: 'column' }}>
                 <Canvas
                   components={components}
                   connections={connections}
@@ -555,7 +545,7 @@ export default function EditorPage({ user, currentProject, setCurrentProject, on
                 maxWidth={isMobile ? window.innerWidth - 40 : 600}
                 onResize={handlePropertiesPanelResize}
               >
-                <div className="h-full bg-white border-l border-gray-200 overflow-y-auto properties-panel-visible" data-properties-panel>
+                <div className="h-full bg-white border-l border-gray-200 overflow-y-auto overflow-x-hidden properties-panel-visible" data-properties-panel>
                   <PropertiesPanel
                     selectedComponent={selectedComponent}
                     onComponentUpdate={updateComponent}

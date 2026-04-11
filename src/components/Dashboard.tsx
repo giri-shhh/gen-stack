@@ -14,7 +14,6 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onCreateNewProject, onLogou
     recentProjects,
     currentFilter,
     viewMode,
-    searchQuery,
     filteredAndSortedProjects,
     
     // Modal states
