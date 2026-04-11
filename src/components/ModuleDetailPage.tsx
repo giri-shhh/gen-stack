@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Editor from '@monaco-editor/react';
 import {
@@ -21,6 +21,18 @@ import {
   FileCode,
   FileText,
   RotateCcw as RevertIcon,
+  GitBranch,
+  GitCommit,
+  Upload,
+  Play,
+  CheckCircle,
+  XCircle,
+  Loader2,
+  Key,
+  RefreshCw,
+  ChevronUp,
+  ExternalLink,
+  Zap,
 } from 'lucide-react';
 import { getTechById, getCategoryByTechId } from '../data/techStack';
 import {
@@ -34,8 +46,9 @@ import type { CanvasComponent, Connection, User, Project } from '../types';
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 interface EnvVar { key: string; value: string; isSecret: boolean }
+type TerminalLine = { text: string; type: 'input' | 'output' | 'error' | 'success' | 'info' };
 
-type NavTab = 'overview' | 'configuration' | 'environment' | 'dependencies' | 'advanced' | 'files';
+type NavTab = 'overview' | 'configuration' | 'environment' | 'dependencies' | 'advanced' | 'files' | 'git';
 
 const NAV_ITEMS: { id: NavTab; label: string; icon: React.ReactNode }[] = [
   { id: 'overview',      label: 'Overview',      icon: <Info className="w-4 h-4" /> },
@@ -44,6 +57,7 @@ const NAV_ITEMS: { id: NavTab; label: string; icon: React.ReactNode }[] = [
   { id: 'dependencies',  label: 'Dependencies',  icon: <Package className="w-4 h-4" /> },
   { id: 'advanced',      label: 'Advanced',      icon: <Layers className="w-4 h-4" /> },
   { id: 'files',         label: 'Files',         icon: <FileCode className="w-4 h-4" /> },
+  { id: 'git',           label: 'Git',           icon: <GitBranch className="w-4 h-4" /> },
 ];
 
 const SWATCH_COLORS = ['#3B82F6','#10B981','#F59E0B','#EF4444','#8B5CF6','#06B6D4','#F97316','#EC4899'];
@@ -181,6 +195,33 @@ export default function ModuleDetailPage({ currentProject, setCurrentProject }: 
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
   const [editedContents, setEditedContents] = useState<Record<string, string>>({});
 
+  // ── Terminal state ────────────────────────────────────────────────────────
+  const [termLines, setTermLines] = useState<TerminalLine[]>([
+    { text: 'Terminal ready. Type "help" for available commands.', type: 'info' },
+  ]);
+  const [termInput, setTermInput] = useState('');
+  const [termHistory, setTermHistory] = useState<string[]>([]);
+  const [termHistIdx, setTermHistIdx] = useState(-1);
+  const [showTerminal, setShowTerminal] = useState(false);
+  const termEndRef = useRef<HTMLDivElement>(null);
+  const termInputRef = useRef<HTMLInputElement>(null);
+
+  // ── Git state ─────────────────────────────────────────────────────────────
+  const [gitToken, setGitToken] = useState(localStorage.getItem('githubToken') || '');
+  const [repoUrl, setRepoUrl] = useState('');
+  const [currentBranch, setCurrentBranch] = useState('main');
+  const [branches, setBranches] = useState<string[]>([]);
+  const [newBranchName, setNewBranchName] = useState('');
+  const [commitMsg, setCommitMsg] = useState('Update module files');
+  const [gitLoading, setGitLoading] = useState<string | null>(null);
+  const [gitPushStatus, setGitPushStatus] = useState<'idle' | 'pushing' | 'success' | 'error'>('idle');
+  const [gitPushMsg, setGitPushMsg] = useState('');
+  const [workflows, setWorkflows] = useState<{ id: number; name: string; path: string }[]>([]);
+  const [selectedWorkflow, setSelectedWorkflow] = useState<number | null>(null);
+  const [deployStatus, setDeployStatus] = useState<'idle' | 'triggering' | 'success' | 'error'>('idle');
+  const [deployMsg, setDeployMsg] = useState('');
+  const [showCreateBranch, setShowCreateBranch] = useState(false);
+
   // ── Load component from project ───────────────────────────────────────────
   useEffect(() => {
     let project: Project | null = null;
@@ -198,6 +239,7 @@ export default function ModuleDetailPage({ currentProject, setCurrentProject }: 
 
     if (project) {
       setProjectName(project.name);
+      if (project.repository) setRepoUrl(project.repository);
       const comps: CanvasComponent[] = project.canvasState?.components || [];
       const conns: Connection[] = project.canvasState?.connections || [];
       setAllComponents(comps);
@@ -231,6 +273,11 @@ export default function ModuleDetailPage({ currentProject, setCurrentProject }: 
     if (!fileTree) return new Map();
     return flattenTree(fileTree);
   }, [fileTree]);
+
+  // Auto-scroll terminal to bottom on new lines
+  useEffect(() => {
+    termEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [termLines]);
 
   // Auto-expand root + common top-level folders when tree changes
   useEffect(() => {
@@ -289,6 +336,292 @@ export default function ModuleDetailPage({ currentProject, setCurrentProject }: 
       if (next.has(path)) next.delete(path); else next.add(path);
       return next;
     });
+  };
+
+  // ── Git helpers ───────────────────────────────────────────────────────────
+  const parseGitHubRepo = (url: string): { owner: string; repo: string } | null => {
+    const m = url.match(/github\.com[/:]([^/]+)\/([^/.]+?)(?:\.git)?(?:\/|$)/);
+    return m ? { owner: m[1], repo: m[2] } : null;
+  };
+
+  const ghHeaders = () => ({
+    Authorization: `token ${gitToken}`,
+    'Content-Type': 'application/json',
+    Accept: 'application/vnd.github.v3+json',
+  });
+
+  const loadBranches = async () => {
+    const parsed = parseGitHubRepo(repoUrl);
+    if (!parsed || !gitToken) return;
+    setGitLoading('Loading branches…');
+    try {
+      const res = await fetch(
+        `https://api.github.com/repos/${parsed.owner}/${parsed.repo}/branches`,
+        { headers: ghHeaders() }
+      );
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data: any[] = await res.json();
+      setBranches(data.map(b => b.name));
+    } catch (e: any) {
+      setGitPushMsg(`Failed to load branches: ${e.message}`);
+    } finally {
+      setGitLoading(null);
+    }
+  };
+
+  const createBranchAPI = async () => {
+    const parsed = parseGitHubRepo(repoUrl);
+    if (!parsed || !gitToken || !newBranchName.trim()) return;
+    setGitLoading('Creating branch…');
+    try {
+      const refRes = await fetch(
+        `https://api.github.com/repos/${parsed.owner}/${parsed.repo}/git/ref/heads/${currentBranch}`,
+        { headers: ghHeaders() }
+      );
+      if (!refRes.ok) throw new Error(`HTTP ${refRes.status}`);
+      const sha = (await refRes.json()).object.sha;
+      const createRes = await fetch(
+        `https://api.github.com/repos/${parsed.owner}/${parsed.repo}/git/refs`,
+        { method: 'POST', headers: ghHeaders(), body: JSON.stringify({ ref: `refs/heads/${newBranchName.trim()}`, sha }) }
+      );
+      if (!createRes.ok) throw new Error(`HTTP ${createRes.status}`);
+      setBranches(prev => [...prev, newBranchName.trim()]);
+      setCurrentBranch(newBranchName.trim());
+      setNewBranchName('');
+      setShowCreateBranch(false);
+      setGitPushMsg(`Branch '${newBranchName.trim()}' created`);
+    } catch (e: any) {
+      setGitPushMsg(`Failed: ${e.message}`);
+    } finally {
+      setGitLoading(null);
+    }
+  };
+
+  const handleCommitAndPush = async () => {
+    const parsed = parseGitHubRepo(repoUrl);
+    if (!parsed || !gitToken) throw new Error('Token and repo URL required');
+    if (editedPaths.size === 0) throw new Error('No changes to commit');
+    setGitPushStatus('pushing');
+    setGitPushMsg('');
+    const { owner, repo } = parsed;
+    const h = ghHeaders();
+    try {
+      const refRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/ref/heads/${currentBranch}`, { headers: h });
+      if (!refRes.ok) throw new Error(`Branch not found (HTTP ${refRes.status})`);
+      const latestSha = (await refRes.json()).object.sha;
+      const commitRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/commits/${latestSha}`, { headers: h });
+      if (!commitRes.ok) throw new Error(`HTTP ${commitRes.status}`);
+      const baseTreeSha = (await commitRes.json()).tree.sha;
+      const treeItems: any[] = [];
+      for (const fp of editedPaths) {
+        const raw = editedContents[fp] !== undefined ? editedContents[fp] : fileMap.get(fp)?.content ?? '';
+        const blobRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/blobs`, {
+          method: 'POST', headers: h,
+          body: JSON.stringify({ content: btoa(Array.from(new TextEncoder().encode(raw)).map(b => String.fromCharCode(b)).join('')), encoding: 'base64' }),
+        });
+        if (!blobRes.ok) throw new Error(`Blob error HTTP ${blobRes.status}`);
+        const blobSha = (await blobRes.json()).sha;
+        const repoPath = fp.includes('/') ? fp.split('/').slice(1).join('/') : fp;
+        treeItems.push({ path: repoPath, mode: '100644', type: 'blob', sha: blobSha });
+      }
+      const treeRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/trees`, {
+        method: 'POST', headers: h, body: JSON.stringify({ base_tree: baseTreeSha, tree: treeItems }),
+      });
+      if (!treeRes.ok) throw new Error(`Tree error HTTP ${treeRes.status}`);
+      const newTreeSha = (await treeRes.json()).sha;
+      const newCommitRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/commits`, {
+        method: 'POST', headers: h,
+        body: JSON.stringify({ message: commitMsg || 'Update module files', tree: newTreeSha, parents: [latestSha] }),
+      });
+      if (!newCommitRes.ok) throw new Error(`Commit error HTTP ${newCommitRes.status}`);
+      const newCommitSha = (await newCommitRes.json()).sha;
+      const updateRes = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/refs/heads/${currentBranch}`, {
+        method: 'PATCH', headers: h, body: JSON.stringify({ sha: newCommitSha }),
+      });
+      if (!updateRes.ok) throw new Error(`Ref update HTTP ${updateRes.status}`);
+      setGitPushStatus('success');
+      setGitPushMsg(`Pushed ${editedPaths.size} file(s) to '${currentBranch}'`);
+    } catch (e: any) {
+      setGitPushStatus('error');
+      setGitPushMsg(e.message || 'Push failed');
+      throw e;
+    }
+  };
+
+  const loadWorkflows = async () => {
+    const parsed = parseGitHubRepo(repoUrl);
+    if (!parsed || !gitToken) return;
+    setGitLoading('Loading workflows…');
+    try {
+      const res = await fetch(`https://api.github.com/repos/${parsed.owner}/${parsed.repo}/actions/workflows`, { headers: ghHeaders() });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      const wfs = (data.workflows || []).map((w: any) => ({ id: w.id, name: w.name, path: w.path }));
+      setWorkflows(wfs);
+      if (wfs.length > 0) setSelectedWorkflow(wfs[0].id);
+    } catch (e: any) {
+      setDeployMsg(`Failed to load workflows: ${e.message}`);
+    } finally {
+      setGitLoading(null);
+    }
+  };
+
+  const handleTriggerDeploy = async () => {
+    const parsed = parseGitHubRepo(repoUrl);
+    if (!parsed || !gitToken || !selectedWorkflow) return;
+    setDeployStatus('triggering');
+    setDeployMsg('');
+    try {
+      const res = await fetch(
+        `https://api.github.com/repos/${parsed.owner}/${parsed.repo}/actions/workflows/${selectedWorkflow}/dispatches`,
+        { method: 'POST', headers: ghHeaders(), body: JSON.stringify({ ref: currentBranch }) }
+      );
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error((err as any).message || `HTTP ${res.status}`);
+      }
+      setDeployStatus('success');
+      setDeployMsg(`Triggered on branch '${currentBranch}'`);
+    } catch (e: any) {
+      setDeployStatus('error');
+      setDeployMsg(e.message || 'Trigger failed');
+    }
+  };
+
+  // ── Terminal command handler ───────────────────────────────────────────────
+  const appendTermLine = (text: string, type: TerminalLine['type'] = 'output') =>
+    setTermLines(prev => [...prev, { text, type }]);
+
+  const handleTermCommand = (raw: string) => {
+    const cmd = raw.trim();
+    if (!cmd) { setTermInput(''); return; }
+    setTermHistory(prev => [cmd, ...prev.slice(0, 49)]);
+    setTermHistIdx(-1);
+    setTermLines(prev => [...prev, { text: `$ ${cmd}`, type: 'input' }]);
+    setTermInput('');
+    const parts = cmd.split(/\s+/);
+    const base = parts[0].toLowerCase();
+    switch (base) {
+      case 'help':
+        appendTermLine('Available commands:', 'info');
+        ['  ls [path]           List module files',
+          '  cat <file>          Show file content',
+          '  pwd                 Show module path',
+          '  echo <text>         Print text',
+          '  clear / cls         Clear terminal',
+          '  git status          Show modified files',
+          '  git branch          List branches',
+          '  git checkout <br>   Switch branch',
+          '  git log             Show recent commit',
+          '  git add .           Stage all changes',
+          '  git commit -m "…"   Record changes',
+          '  git push            Push to remote',
+          '  git pull            Sync with remote',
+          '  exit                Close terminal',
+        ].forEach(l => appendTermLine(l));
+        break;
+      case 'clear': case 'cls':
+        setTermLines([]);
+        break;
+      case 'pwd':
+        appendTermLine(`/${component?.properties?.name || component?.techId || 'module'}`);
+        break;
+      case 'ls': {
+        const shown = new Set<string>();
+        const prefix = parts[1] ? parts[1].replace(/\/$/, '') + '/' : '';
+        [...fileMap.keys()].forEach(p => {
+          const rel = p.split('/').slice(1).join('/');
+          if (!prefix || rel.startsWith(prefix)) {
+            const rest = prefix ? rel.slice(prefix.length) : rel;
+            const seg = rest.split('/')[0];
+            if (seg) shown.add(seg + (rest.includes('/') ? '/' : ''));
+          }
+        });
+        if (shown.size === 0) appendTermLine('No files found', 'error');
+        else [...shown].sort().forEach(f => appendTermLine(f));
+        break;
+      }
+      case 'cat': {
+        const target = parts[1];
+        if (!target) { appendTermLine('Usage: cat <file>', 'error'); break; }
+        const key = [...fileMap.keys()].find(k => k.endsWith('/' + target) || k === target);
+        if (!key) { appendTermLine(`cat: ${target}: No such file`, 'error'); break; }
+        const content = editedContents[key] !== undefined ? editedContents[key] : fileMap.get(key)?.content ?? '';
+        content.split('\n').slice(0, 60).forEach((l: string) => appendTermLine(l));
+        if (content.split('\n').length > 60) appendTermLine('… (truncated)', 'info');
+        break;
+      }
+      case 'echo':
+        appendTermLine(parts.slice(1).join(' '));
+        break;
+      case 'git': {
+        const sub = parts[1]?.toLowerCase();
+        if (!sub) { appendTermLine('usage: git <command>', 'error'); break; }
+        switch (sub) {
+          case 'status':
+            appendTermLine(`On branch ${currentBranch}`, 'info');
+            if (editedPaths.size === 0) appendTermLine('nothing to commit, working tree clean', 'success');
+            else {
+              appendTermLine(`Changes not staged for commit: (${editedPaths.size} file(s))`, 'output');
+              [...editedPaths].forEach(p => appendTermLine(`  modified:   ${p.split('/').slice(1).join('/')}`, 'error'));
+            }
+            break;
+          case 'branch':
+            if (branches.length === 0) appendTermLine(`* ${currentBranch}`, 'success');
+            else branches.forEach(b => appendTermLine(b === currentBranch ? `* ${b}` : `  ${b}`, b === currentBranch ? 'success' : 'output'));
+            break;
+          case 'checkout':
+            if (!parts[2]) { appendTermLine('Usage: git checkout <branch>', 'error'); break; }
+            if (branches.includes(parts[2])) { setCurrentBranch(parts[2]); appendTermLine(`Switched to branch '${parts[2]}'`, 'success'); }
+            else appendTermLine(`error: pathspec '${parts[2]}' did not match any branch`, 'error');
+            break;
+          case 'log':
+            appendTermLine(`commit a1b2c3d (HEAD -> ${currentBranch})`, 'success');
+            appendTermLine('Author: You <you@example.com>');
+            appendTermLine(`Date:   ${new Date().toDateString()}`);
+            appendTermLine('');
+            appendTermLine('    Previous changes');
+            break;
+          case 'add':
+            appendTermLine(`Staged ${editedPaths.size} file(s)`, 'success');
+            break;
+          case 'commit': {
+            const mi = parts.indexOf('-m');
+            const msg = mi >= 0 ? parts.slice(mi + 1).join(' ').replace(/^["']|["']$/g, '') : commitMsg;
+            if (!msg) { appendTermLine('error: commit message is empty', 'error'); break; }
+            setCommitMsg(msg);
+            appendTermLine(`[${currentBranch} a1b2c3d] ${msg}`, 'success');
+            appendTermLine(` ${editedPaths.size} file(s) changed`);
+            break;
+          }
+          case 'push':
+            if (!gitToken || !repoUrl) {
+              appendTermLine('error: remote not configured — set token & repo URL in the Git tab', 'error');
+            } else {
+              appendTermLine(`Pushing to origin/${currentBranch}…`, 'info');
+              handleCommitAndPush()
+                .then(() => appendTermLine(`Branch '${currentBranch}' pushed to origin`, 'success'))
+                .catch((e: Error) => appendTermLine(`error: ${e.message}`, 'error'));
+            }
+            break;
+          case 'pull':
+            appendTermLine('Already up to date.', 'success');
+            break;
+          case 'fetch':
+            appendTermLine('Fetching origin…', 'info');
+            appendTermLine(`From ${repoUrl || 'origin'}`);
+            break;
+          default:
+            appendTermLine(`git: '${sub}' is not a git command. See 'git help'.`, 'error');
+        }
+        break;
+      }
+      case 'exit': case 'quit':
+        setShowTerminal(false);
+        break;
+      default:
+        appendTermLine(`${base}: command not found. Type 'help' for commands.`, 'error');
+    }
   };
 
   const handleSave = () => {
@@ -725,67 +1058,144 @@ export default function ModuleDetailPage({ currentProject, setCurrentProject }: 
             )}
           </div>
 
-          {/* Monaco Editor */}
-          {selectedFilePath ? (
+          {/* Editor + Terminal split */}
+          <div className="flex-1 flex flex-col min-h-0">
+            {/* Monaco / empty state */}
             <div className="flex-1 min-h-0">
-              <Editor
-                height="100%"
-                language={currentFileLang}
-                value={currentFileContent}
-                onChange={handleFileChange}
-                theme="vs-dark"
-                loading={
-                  <div className="flex-1 flex items-center justify-center bg-[#1e1e1e] h-full">
-                    <div className="text-gray-500 text-sm">Loading editor…</div>
+              {selectedFilePath ? (
+                <Editor
+                  height="100%"
+                  language={currentFileLang}
+                  value={currentFileContent}
+                  onChange={handleFileChange}
+                  theme="vs-dark"
+                  loading={
+                    <div className="flex items-center justify-center bg-[#1e1e1e] h-full">
+                      <div className="text-gray-500 text-sm">Loading editor…</div>
+                    </div>
+                  }
+                  options={{
+                    minimap: { enabled: false },
+                    fontSize: 13,
+                    fontFamily: '"Cascadia Code", "JetBrains Mono", "Fira Code", monospace',
+                    lineNumbers: 'on',
+                    wordWrap: 'off',
+                    scrollBeyondLastLine: false,
+                    automaticLayout: true,
+                    padding: { top: 12, bottom: 12 },
+                    tabSize: 2,
+                    insertSpaces: true,
+                    renderLineHighlight: 'line',
+                    smoothScrolling: true,
+                    cursorBlinking: 'smooth',
+                    bracketPairColorization: { enabled: true },
+                    guides: { bracketPairs: true, indentation: true },
+                    suggest: { showKeywords: true },
+                    formatOnPaste: true,
+                  }}
+                />
+              ) : (
+                <div className="h-full flex flex-col items-center justify-center gap-3">
+                  <FileText className="w-14 h-14 text-gray-600" />
+                  <div className="text-center">
+                    <p className="text-gray-400 text-sm font-medium">No file selected</p>
+                    <p className="text-gray-600 text-xs mt-1">Click a file in the explorer to view and edit it</p>
                   </div>
-                }
-                options={{
-                  minimap: { enabled: false },
-                  fontSize: 13,
-                  fontFamily: '"Cascadia Code", "JetBrains Mono", "Fira Code", monospace',
-                  lineNumbers: 'on',
-                  wordWrap: 'off',
-                  scrollBeyondLastLine: false,
-                  automaticLayout: true,
-                  padding: { top: 12, bottom: 12 },
-                  tabSize: 2,
-                  insertSpaces: true,
-                  renderLineHighlight: 'line',
-                  smoothScrolling: true,
-                  cursorBlinking: 'smooth',
-                  bracketPairColorization: { enabled: true },
-                  guides: { bracketPairs: true, indentation: true },
-                  suggest: { showKeywords: true },
-                  formatOnPaste: true,
-                }}
-              />
-            </div>
-          ) : (
-            <div className="flex-1 flex flex-col items-center justify-center gap-3">
-              <FileText className="w-14 h-14 text-gray-600" />
-              <div className="text-center">
-                <p className="text-gray-400 text-sm font-medium">No file selected</p>
-                <p className="text-gray-600 text-xs mt-1">Click a file in the explorer to view and edit it</p>
-              </div>
-              {fileMap.size > 0 && (
-                <p className="text-gray-600 text-xs">{fileMap.size} file{fileMap.size !== 1 ? 's' : ''} available</p>
+                  {fileMap.size > 0 && (
+                    <p className="text-gray-600 text-xs">{fileMap.size} file{fileMap.size !== 1 ? 's' : ''} available</p>
+                  )}
+                </div>
               )}
             </div>
-          )}
+
+            {/* Integrated Terminal Panel */}
+            {showTerminal && (
+              <div className="flex-shrink-0 h-48 flex flex-col border-t border-white/10 bg-[#1e1e1e]">
+                {/* Terminal header */}
+                <div className="flex items-center justify-between px-3 py-1 border-b border-white/10 flex-shrink-0">
+                  <div className="flex items-center gap-1.5 text-[11px] text-gray-400 font-medium uppercase tracking-wider">
+                    <Terminal className="w-3 h-3" />
+                    <span>Terminal</span>
+                  </div>
+                  <button
+                    onClick={() => setShowTerminal(false)}
+                    className="text-gray-500 hover:text-gray-300 transition-colors p-0.5 rounded"
+                    title="Close terminal"
+                  >
+                    <ChevronUp className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+                {/* Output */}
+                <div
+                  className="flex-1 overflow-y-auto px-3 py-1.5 font-mono text-[12px] leading-5 cursor-text"
+                  onClick={() => termInputRef.current?.focus()}
+                >
+                  {termLines.map((line, i) => (
+                    <div
+                      key={i}
+                      className={`whitespace-pre-wrap break-all ${
+                        line.type === 'input'   ? 'text-white' :
+                        line.type === 'error'   ? 'text-red-400' :
+                        line.type === 'success' ? 'text-green-400' :
+                        line.type === 'info'    ? 'text-blue-300' :
+                                                  'text-gray-300'
+                      }`}
+                    >
+                      {line.text || '\u00A0'}
+                    </div>
+                  ))}
+                  <div ref={termEndRef} />
+                </div>
+                {/* Input */}
+                <div className="flex items-center gap-2 px-3 py-1.5 border-t border-white/10 flex-shrink-0">
+                  <span className="text-green-400 font-mono text-[12px] select-none flex-shrink-0">$</span>
+                  <input
+                    ref={termInputRef}
+                    type="text"
+                    value={termInput}
+                    onChange={e => setTermInput(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') {
+                        handleTermCommand(termInput);
+                      } else if (e.key === 'ArrowUp') {
+                        e.preventDefault();
+                        const idx = Math.min(termHistIdx + 1, termHistory.length - 1);
+                        setTermHistIdx(idx);
+                        if (termHistory[idx] !== undefined) setTermInput(termHistory[idx]);
+                      } else if (e.key === 'ArrowDown') {
+                        e.preventDefault();
+                        const idx = Math.max(termHistIdx - 1, -1);
+                        setTermHistIdx(idx);
+                        setTermInput(idx >= 0 ? termHistory[idx] : '');
+                      }
+                    }}
+                    className="flex-1 bg-transparent outline-none text-gray-200 font-mono text-[12px] caret-green-400 placeholder-gray-600"
+                    placeholder="Type a command…"
+                    autoComplete="off"
+                    spellCheck={false}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
 
           {/* Status bar */}
           <div className="flex-shrink-0 flex items-center justify-between bg-[#007acc] px-3 h-6 text-[11px] text-white/80">
             <div className="flex items-center gap-3">
               {tech?.logo && <tech.logo className="w-3 h-3" />}
               <span>{tech?.name} · {category || component.techId}</span>
+              <button
+                onClick={() => { setShowTerminal(v => !v); setTimeout(() => termInputRef.current?.focus(), 80); }}
+                className={`flex items-center gap-1 px-1.5 py-0.5 rounded hover:bg-white/20 transition-colors ${showTerminal ? 'bg-white/20' : ''}`}
+                title="Toggle Terminal (^`)"
+              >
+                <Terminal className="w-3 h-3" />
+                <span>Terminal</span>
+              </button>
             </div>
             <div className="flex items-center gap-3">
-              {selectedFilePath && (
-                <span className="capitalize">{currentFileLang}</span>
-              )}
-              {editedPaths.size > 0 && (
-                <span className="text-amber-200">● {editedPaths.size} modified</span>
-              )}
+              {selectedFilePath && <span className="capitalize">{currentFileLang}</span>}
+              {editedPaths.size > 0 && <span className="text-amber-200">● {editedPaths.size} modified</span>}
             </div>
           </div>
         </div>
