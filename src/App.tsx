@@ -269,6 +269,7 @@ function App() {
       isTemporary: true
     };
     
+    localStorage.setItem('user', JSON.stringify(tempUser));
     setUser(tempUser);
     setGetStartedModalOpen(false);
     
@@ -383,6 +384,7 @@ function App() {
   };
 
   const handleLogout = () => {
+    localStorage.removeItem('user');
     setUser(null);
     setCurrentProject(null);
     navigate('/');
@@ -401,6 +403,7 @@ function App() {
   };
 
   const handleAuthSuccess = (userObj: User) => {
+    localStorage.setItem('user', JSON.stringify(userObj));
     setUser(userObj);
     setAuthModalOpen(false);
     
