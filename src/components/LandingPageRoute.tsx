@@ -29,6 +29,7 @@ export default function LandingPageRoute() {
                 onClose={() => setGetStartedModalOpen(false)}
                 onSignUp={handleGetStartedSignUp}
                 onContinueAsTemp={handleContinueAsTemp}
+                onAuthSuccess={handleAuthSuccess}
             />
             {authModalOpen && (
                 <AuthModal

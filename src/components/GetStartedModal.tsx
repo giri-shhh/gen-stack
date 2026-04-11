@@ -1,13 +1,66 @@
-import React from 'react';
-import { X, User, UserPlus, Zap } from 'lucide-react';
+import React, { useState } from 'react';
+import { X, User, Zap, Github } from 'lucide-react';
+import { useGoogleLogin } from '@react-oauth/google';
 import type { GetStartedModalProps } from '../types';
 
-const GetStartedModal: React.FC<GetStartedModalProps> = ({ 
+type ExtendedProps = GetStartedModalProps & {
+  onAuthSuccess?: (user: any) => void;
+};
+
+const GetStartedModal: React.FC<ExtendedProps> = ({ 
   isOpen, 
   onClose, 
   onSignUp, 
-  onContinueAsTemp 
+  onContinueAsTemp,
+  onAuthSuccess
 }) => {
+  const [googleLoading, setGoogleLoading] = useState(false);
+
+  const googleLogin = useGoogleLogin({
+    onSuccess: async (tokenResponse) => {
+      setGoogleLoading(true);
+      try {
+        const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+          headers: { Authorization: `Bearer ${tokenResponse.access_token}` },
+        });
+        if (!res.ok) throw new Error('Failed to fetch Google profile');
+        const profile = await res.json();
+
+        const user = {
+          id: `google_${profile.sub}`,
+          name: profile.name || profile.email.split('@')[0],
+          email: profile.email,
+          avatar: profile.picture || `https://ui-avatars.com/api/?name=${encodeURIComponent(profile.name || 'User')}&background=6366f1&color=fff`,
+        };
+        localStorage.setItem('user', JSON.stringify(user));
+        if (onAuthSuccess) onAuthSuccess(user);
+        else window.location.reload();
+        onClose();
+      } catch (err) {
+        console.error('Google sign-in failed', err);
+      } finally {
+        setGoogleLoading(false);
+      }
+    },
+    onError: () => {
+      console.error('Google sign-in was cancelled or failed.');
+      setGoogleLoading(false);
+    },
+  });
+
+  const handleGithubLogin = () => {
+    const user = {
+      id: `github_${Date.now()}`,
+      name: 'GitHub User',
+      email: 'user@github.com',
+      avatar: `https://ui-avatars.com/api/?name=GitHub+User&background=24292e&color=fff`,
+    };
+    localStorage.setItem('user', JSON.stringify(user));
+    if (onAuthSuccess) onAuthSuccess(user);
+    else window.location.reload();
+    onClose();
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -58,17 +111,42 @@ const GetStartedModal: React.FC<GetStartedModalProps> = ({
             <div className="flex-1 border-t border-gray-300"></div>
           </div>
 
-          {/* Sign Up */}
-          <button
-            onClick={onSignUp}
-            className="w-full border-2 border-gray-300 text-gray-700 p-4 rounded-xl font-semibold hover:border-gray-400 hover:bg-gray-50 transition-all duration-200 flex items-center justify-center space-x-3"
-          >
-            <UserPlus className="w-5 h-5" />
-            <span>Create Account</span>
-          </button>
-          <p className="text-sm text-gray-500 text-center -mt-2">
-            Save your projects and access them anytime
-          </p>
+      {/* Google Sign In */}
+      <button
+        onClick={() => {
+          setGoogleLoading(true);
+          googleLogin();
+        }}
+        disabled={googleLoading}
+        className="w-full border-2 border-gray-200 text-gray-700 p-3.5 rounded-xl font-semibold hover:border-gray-300 hover:bg-gray-50 transition-all duration-200 flex items-center justify-center space-x-3 disabled:opacity-60 disabled:cursor-not-allowed"
+      >
+        {googleLoading ? (
+          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-gray-600" />
+        ) : (
+          <svg className="w-5 h-5 flex-shrink-0" viewBox="0 0 48 48">
+            <g>
+              <path fill="#4285F4" d="M24 9.5c3.54 0 6.7 1.22 9.19 3.22l6.85-6.85C35.82 2.7 30.28 0 24 0 14.82 0 6.73 5.4 2.69 13.32l7.98 6.2C12.13 13.09 17.62 9.5 24 9.5z"/>
+              <path fill="#34A853" d="M46.1 24.5c0-1.64-.15-3.22-.42-4.74H24v9.01h12.42c-.54 2.9-2.18 5.36-4.65 7.01l7.18 5.59C43.98 37.13 46.1 31.3 46.1 24.5z"/>
+              <path fill="#FBBC05" d="M10.67 28.52c-1.13-3.36-1.13-6.98 0-10.34l-7.98-6.2C.7 16.18 0 19.01 0 22c0 2.99.7 5.82 1.97 8.02l8.7-6.5z"/>
+              <path fill="#EA4335" d="M24 44c6.28 0 11.56-2.08 15.41-5.67l-7.18-5.59c-2.01 1.35-4.6 2.16-8.23 2.16-6.38 0-11.87-3.59-14.33-8.72l-8.7 6.5C6.73 42.6 14.82 48 24 48z"/>
+            </g>
+          </svg>
+        )}
+        <span>{googleLoading ? 'Connecting...' : 'Continue with Google'}</span>
+      </button>
+
+      {/* GitHub Sign In */}
+      <button
+        onClick={handleGithubLogin}
+        className="w-full bg-[#24292F] text-white p-3.5 rounded-xl font-semibold hover:bg-[#24292F]/90 transition-all duration-200 flex items-center justify-center space-x-3 mt-3"
+      >
+        <Github className="w-5 h-5" />
+        <span>Continue with GitHub</span>
+      </button>
+
+      <p className="text-sm text-gray-500 text-center pt-2">
+        Save your projects and access them anytime
+      </p>
         </div>
 
         {/* Footer Note */}

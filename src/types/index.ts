@@ -26,6 +26,8 @@ export interface Project {
   isPublic?: boolean;
   isFavorite?: boolean;
   tags?: string[];
+  useAiArchitecture?: boolean;
+  aiModel?: 'openai' | 'anthropic' | 'gemini';
 }
 
 // Canvas component types

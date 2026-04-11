@@ -109,6 +109,10 @@ const ExportModal: React.FC<ExportModalProps> = ({
     // Generate build and run scripts
     generateBuildScripts(zip);
 
+    // Generate GitHub Actions workflow
+    const githubActionContent = generateGithubActionWorkflow(componentsByCategory);
+    zip.file('.github/workflows/ci.yml', githubActionContent);
+
     return zip;
   };
 
@@ -164,6 +168,21 @@ const ExportModal: React.FC<ExportModalProps> = ({
         'build-and-run.ps1': { type: 'file', description: 'PowerShell build script' },
         'build-and-run.bat': { type: 'file', description: 'Batch build script' },
         'README.md': { type: 'file', description: 'Scripts documentation' }
+      }
+    };
+
+    // Add GitHub Actions
+    structure['.github/'] = {
+      type: 'folder',
+      description: 'GitHub configuration',
+      children: {
+        'workflows/': {
+          type: 'folder',
+          description: 'CI/CD workflows',
+          children: {
+            'ci.yml': { type: 'file', description: 'Continuous Integration & Deployment pipeline' }
+          }
+        }
       }
     };
 
@@ -2105,6 +2124,56 @@ The scripts automatically detect:
     zip.file('scripts/README.md', scriptsReadme);
   };
 
+  const generateGithubActionWorkflow = (componentsByCategory: Record<string, CanvasComponent[]>) => {
+    const hasFrontend = !!componentsByCategory.frontend;
+    const hasBackend = !!componentsByCategory.backend;
+    const hasDocker = components.some(c => c.techId === 'docker');
+
+    return `name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+${hasFrontend ? `
+      - name: Install and Build Frontend
+        run: |
+          cd frontend
+          npm ci
+          npm run build --if-present` : ''}${hasBackend ? `
+
+      - name: Install and Build Backend
+        run: |
+          cd backend
+          npm ci
+          npm run build --if-present` : ''}${hasDocker ? `
+
+      - name: Build Docker Compose
+        run: docker-compose build` : ''}
+
+      # Deployment Step (Uncomment and configure your target provider)
+      # - name: Deploy to Production
+      #   env:
+      #     DEPLOY_TOKEN: \${{ secrets.DEPLOY_TOKEN }}
+      #   run: |
+      #     echo "Add your deployment scripts here"
+      #     # e.g., for AWS: aws s3 sync frontend/build/ s3://my-bucket
+      #     # e.g., for Docker: docker push myrepo/myapp:latest
+`;
+  };
+
   const handleExport = async () => {
     setGenerating(true);
     setExportStatus(null);
@@ -2482,6 +2551,10 @@ The scripts automatically detect:
               <li className="flex items-center space-x-2">
                 <FileText className="w-4 h-4 text-blue-600" />
                 Environment configuration
+              </li>
+              <li className="flex items-center space-x-2">
+                <GitBranch className="w-4 h-4 text-blue-600" />
+                GitHub Actions workflow for CI/CD
               </li>
             </ul>
           </div>

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, Download, FileText, Folder, Code } from 'lucide-react';
+import { X, Download, FileText, Folder, Code, GitBranch } from 'lucide-react';
 import { saveAs } from 'file-saver';
 import JSZip from 'jszip';
 import { getTechById, getCategoryByTechId } from '../data/techStack';
@@ -75,6 +75,10 @@ const CodeGenerator = ({ components, connections, onClose }: CodeGeneratorProps)
 
     // Generate build and run scripts
     generateBuildScripts(zip);
+
+    // Generate GitHub Actions workflow
+    const githubActionContent = generateGithubActionWorkflow(componentsByCategory);
+    zip.file('.github/workflows/ci.yml', githubActionContent);
 
     return zip;
   };
@@ -1970,6 +1974,56 @@ The scripts automatically detect:
     zip.file('scripts/README.md', scriptsReadme);
   };
 
+  const generateGithubActionWorkflow = (componentsByCategory: Record<string, CanvasComponent[]>) => {
+    const hasFrontend = !!componentsByCategory.frontend;
+    const hasBackend = !!componentsByCategory.backend;
+    const hasDocker = components.some(c => c.techId === 'docker');
+
+    return `name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+${hasFrontend ? `
+      - name: Install and Build Frontend
+        run: |
+          cd frontend
+          npm ci
+          npm run build --if-present` : ''}${hasBackend ? `
+
+      - name: Install and Build Backend
+        run: |
+          cd backend
+          npm ci
+          npm run build --if-present` : ''}${hasDocker ? `
+
+      - name: Build Docker Compose
+        run: docker-compose build` : ''}
+
+      # Deployment Step (Uncomment and configure your target provider)
+      # - name: Deploy to Production
+      #   env:
+      #     DEPLOY_TOKEN: \${{ secrets.DEPLOY_TOKEN }}
+      #   run: |
+      #     echo "Add your deployment scripts here"
+      #     # e.g., for AWS: aws s3 sync frontend/build/ s3://my-bucket
+      #     # e.g., for Docker: docker push myrepo/myapp:latest
+`;
+  };
+
   const handleGenerate = async () => {
     setGenerating(true);
     try {
@@ -2032,6 +2086,10 @@ The scripts automatically detect:
               <li className="flex items-center space-x-golden-sm">
                 <FileText className="w-4 h-4 text-primary-600" />
                 Environment configuration
+              </li>
+              <li className="flex items-center space-x-golden-sm">
+                <GitBranch className="w-4 h-4 text-primary-600" />
+                GitHub Actions workflow for CI/CD
               </li>
             </ul>
           </div>

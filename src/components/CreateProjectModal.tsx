@@ -1,12 +1,42 @@
 import React, { useState } from 'react';
-import { X, Folder, Sparkles, Rocket, ArrowRight, Lightbulb, Zap, Github, Globe, Tag } from 'lucide-react';
+import { X, Folder, Sparkles, Rocket, ArrowRight, Lightbulb, Zap, Github, Globe, Tag, BrainCircuit, Key } from 'lucide-react';
 import type { CreateProjectModalProps, Project } from '../types';
+import { getStoredApiKey, saveApiKey } from '../lib/aiArchitectureGenerator';
+
+type AiModel = 'openai' | 'anthropic' | 'gemini';
+
+const AI_MODELS: Array<{ id: AiModel; label: string; hint: string; placeholder: string; docsUrl: string }> = [
+  {
+    id: 'openai',
+    label: 'OpenAI GPT-4o',
+    hint: 'Requires an OpenAI API key with GPT-4 access.',
+    placeholder: 'sk-...',
+    docsUrl: 'https://platform.openai.com/api-keys',
+  },
+  {
+    id: 'anthropic',
+    label: 'Anthropic Claude',
+    hint: 'Requires an Anthropic API key.',
+    placeholder: 'sk-ant-...',
+    docsUrl: 'https://console.anthropic.com/settings/keys',
+  },
+  {
+    id: 'gemini',
+    label: 'Google Gemini',
+    hint: 'Requires a Google AI Studio API key.',
+    placeholder: 'AIza...',
+    docsUrl: 'https://aistudio.google.com/app/apikey',
+  },
+];
 
 const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ isOpen, onClose, onCreateProject }) => {
   const [formData, setFormData] = useState({ name: '', description: '', repository: '', deploymentUrl: '', version: '' });
   const [githubIntegration, setGithubIntegration] = useState<'none' | 'create' | 'link'>('none');
   const [githubToken, setGithubToken] = useState(localStorage.getItem('githubToken') || '');
   const [repoPrivate, setRepoPrivate] = useState(true);
+  const [useAiArchitecture, setUseAiArchitecture] = useState(false);
+  const [aiModel, setAiModel] = useState<AiModel>('openai');
+  const [aiApiKey, setAiApiKey] = useState(() => getStoredApiKey('openai'));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -57,6 +87,11 @@ const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ isOpen, onClose
         finalRepositoryUrl = undefined;
       }
 
+      if (useAiArchitecture) {
+        if (!aiApiKey.trim()) throw new Error('API key is required when AI architecture generation is enabled');
+        saveApiKey(aiModel, aiApiKey.trim());
+      }
+
       const newProject: Project = {
         id: Date.now(),
         name: formData.name.trim(),
@@ -66,11 +101,15 @@ const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ isOpen, onClose
         version: formData.version.trim() || undefined,
         lastModified: new Date().toISOString().split('T')[0],
         technologies: [],
-        status: 'draft' as const
+        status: 'draft' as const,
+        useAiArchitecture,
+        aiModel: useAiArchitecture ? aiModel : undefined,
       };
 
       await onCreateProject(newProject);
       setFormData({ name: '', description: '', repository: '', deploymentUrl: '', version: '' });
+      setUseAiArchitecture(false);
+      setAiApiKey('');
       onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create project');
@@ -82,6 +121,7 @@ const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ isOpen, onClose
   const handleClose = () => {
     if (!loading) {
       setFormData({ name: '', description: '', repository: '', deploymentUrl: '', version: '' });
+      setUseAiArchitecture(false);
       setError('');
       onClose();
     }
@@ -189,6 +229,94 @@ const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ isOpen, onClose
                 required
                 disabled={loading}
               />
+            </div>
+
+            {/* AI Architecture Generation */}
+            <div className={`rounded-2xl border-2 transition-all duration-200 overflow-hidden ${useAiArchitecture ? 'border-purple-500' : 'border-gray-200 dark:border-gray-600'}`}>
+              {/* Toggle header */}
+              <div
+                onClick={() => !loading && setUseAiArchitecture(prev => !prev)}
+                className={`flex items-start space-x-4 p-5 cursor-pointer select-none transition-colors duration-200 ${useAiArchitecture ? 'bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20' : 'bg-gray-50 dark:bg-gray-700/30 hover:bg-gray-100 dark:hover:bg-gray-700/50'}`}
+              >
+                <div className={`mt-0.5 flex-shrink-0 p-2 rounded-xl transition-all duration-200 ${useAiArchitecture ? 'bg-purple-600 text-white shadow-lg shadow-purple-500/30' : 'bg-gray-200 dark:bg-gray-600 text-gray-500 dark:text-gray-400'}`}>
+                  <BrainCircuit className="w-5 h-5" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between">
+                    <span className={`text-sm font-semibold ${useAiArchitecture ? 'text-purple-700 dark:text-purple-300' : 'text-gray-700 dark:text-gray-300'}`}>
+                      AI-Generated System Architecture
+                    </span>
+                    <div className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors duration-200 flex-shrink-0 ml-3 ${useAiArchitecture ? 'bg-purple-600' : 'bg-gray-300 dark:bg-gray-600'}`}>
+                      <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow-sm transition-transform duration-200 ${useAiArchitecture ? 'translate-x-4' : 'translate-x-1'}`} />
+                    </div>
+                  </div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    Let AI analyze your project description and automatically suggest a system architecture with recommended components and connections.
+                  </p>
+                </div>
+              </div>
+
+              {/* Expanded config — shown only when toggled on */}
+              {useAiArchitecture && (
+                <div className="px-5 pb-5 pt-4 space-y-4 bg-white dark:bg-gray-800 border-t border-purple-200 dark:border-purple-800/50">
+                  {/* Model selection */}
+                  <div className="space-y-2">
+                    <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
+                      <BrainCircuit className="w-4 h-4 text-purple-500" />
+                      <span>AI Model</span>
+                    </label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {AI_MODELS.map(m => (
+                        <button
+                          key={m.id}
+                          type="button"
+                          disabled={loading}
+                          onClick={() => {
+                            setAiModel(m.id);
+                            setAiApiKey(getStoredApiKey(m.id));
+                          }}
+                          className={`py-2.5 px-3 rounded-xl text-xs font-semibold border-2 transition-all duration-150 ${
+                            aiModel === m.id
+                              ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300'
+                              : 'border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:border-purple-300 dark:hover:border-purple-600'
+                          }`}
+                        >
+                          {m.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* API Key */}
+                  <div className="space-y-2">
+                    <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
+                      <Key className="w-4 h-4 text-purple-500" />
+                      <span>API Key</span>
+                    </label>
+                    <input
+                      type="password"
+                      value={aiApiKey}
+                      onChange={e => setAiApiKey(e.target.value)}
+                      disabled={loading}
+                      placeholder={AI_MODELS.find(m => m.id === aiModel)?.placeholder ?? ''}
+                      className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 text-sm shadow-sm"
+                    />
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      {AI_MODELS.find(m => m.id === aiModel)?.hint}{' '}
+                      <a
+                        href={AI_MODELS.find(m => m.id === aiModel)?.docsUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-purple-500 hover:underline"
+                        onClick={e => e.stopPropagation()}
+                      >
+                        Get API key
+                      </a>
+                      . Your key is stored locally only.
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* GitHub Setup (Optional) */}

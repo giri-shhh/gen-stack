@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { DndContext, DragOverlay, closestCenter } from '@dnd-kit/core';
-import { Settings } from 'lucide-react';
+import { Settings, BrainCircuit, Loader2, Key, RefreshCw } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 
 import Canvas from './Canvas';
@@ -9,14 +9,14 @@ import PropertiesPanel from './PropertiesPanelModular';
 import ResizablePanel from './ResizablePanel';
 import Header from './Header';
 import Toast from './Toast';
-import ExportModal from './ExportModal';
 import { useCanvasState } from '../hooks/useCanvasState';
 import { getTechById } from '../data/techStack';
-import type { 
-  User, 
-  Project, 
-  CanvasComponent, 
-  Technology, 
+import { generateArchitecture, getStoredApiKey, saveApiKey } from '../lib/aiArchitectureGenerator';
+import type {
+  User,
+  Project,
+  CanvasComponent,
+  Technology,
   Toast as ToastType,
   Connection
 } from '../types';
@@ -50,6 +50,12 @@ interface EditorPageProps {
 export default function EditorPage({ user, currentProject, setCurrentProject, onLogout }: EditorPageProps) {
   const navigate = useNavigate();
   const [toast, setToast] = useState<ToastType | null>(null);
+
+  // AI architecture generation state
+  const [isGeneratingAI, setIsGeneratingAI] = useState(false);
+  const [aiKeyPrompt, setAiKeyPrompt] = useState(false);
+  const [aiKeyInput, setAiKeyInput] = useState('');
+  const aiGeneratedRef = useRef(false);
 
   // Mobile state
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
@@ -183,7 +189,43 @@ export default function EditorPage({ user, currentProject, setCurrentProject, on
     } else if (currentProject) {
       resetCanvas();
     }
+    // Reset AI generation guard when project changes
+    aiGeneratedRef.current = false;
   }, [currentProject?.id]);
+
+  // Auto-generate AI architecture for new AI-enabled projects (no canvas state yet)
+  useEffect(() => {
+    if (
+      !currentProject?.useAiArchitecture ||
+      currentProject.canvasState ||
+      aiGeneratedRef.current ||
+      isGeneratingAI
+    ) return;
+
+    const apiKey = getStoredApiKey(currentProject.aiModel ?? 'openai');
+    if (!apiKey) {
+      setAiKeyPrompt(true);
+      return;
+    }
+    runAiGeneration(apiKey);
+  }, [currentProject?.id, isGeneratingAI]);
+
+  const runAiGeneration = async (apiKey: string) => {
+    if (!currentProject) return;
+    aiGeneratedRef.current = true;
+    setAiKeyPrompt(false);
+    setIsGeneratingAI(true);
+    try {
+      const { components: genComponents, connections: genConnections } = await generateArchitecture(currentProject, apiKey);
+      loadCanvasState(genComponents, genConnections);
+      setToast({ message: 'AI architecture generated successfully!', type: 'success' });
+    } catch (err) {
+      aiGeneratedRef.current = false;
+      setToast({ message: `AI generation failed: ${err instanceof Error ? err.message : 'Unknown error'}`, type: 'error' });
+    } finally {
+      setIsGeneratingAI(false);
+    }
+  };
 
   useEffect(() => {
     (window as any).debugSaveProject = () => {
@@ -531,7 +573,94 @@ export default function EditorPage({ user, currentProject, setCurrentProject, on
                   onComponentDoubleClick={handleComponentDoubleClick}
                   onViewProjectStructure={handleViewProjectStructure}
                 />
-                
+
+                {/* AI generation loading overlay */}
+                {isGeneratingAI && (
+                  <div className="absolute inset-0 z-40 flex flex-col items-center justify-center bg-gray-900/60 backdrop-blur-sm">
+                    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-8 flex flex-col items-center space-y-4 max-w-sm mx-4">
+                      <div className="relative">
+                        <div className="bg-gradient-to-r from-purple-600 to-indigo-600 p-4 rounded-2xl shadow-lg">
+                          <BrainCircuit className="w-8 h-8 text-white" />
+                        </div>
+                        <Loader2 className="absolute -top-1 -right-1 w-5 h-5 text-purple-500 animate-spin" />
+                      </div>
+                      <div className="text-center">
+                        <p className="font-semibold text-gray-900 dark:text-white">Generating Architecture</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                          AI is designing your system architecture…
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* AI key prompt overlay — shown when key is missing */}
+                {aiKeyPrompt && !isGeneratingAI && (
+                  <div className="absolute inset-0 z-40 flex flex-col items-center justify-center bg-gray-900/60 backdrop-blur-sm">
+                    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-8 flex flex-col space-y-5 max-w-sm w-full mx-4">
+                      <div className="flex items-center space-x-3">
+                        <div className="bg-gradient-to-r from-purple-600 to-indigo-600 p-3 rounded-xl shadow">
+                          <Key className="w-5 h-5 text-white" />
+                        </div>
+                        <div>
+                          <p className="font-semibold text-gray-900 dark:text-white">API Key Required</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">Enter your key to generate the architecture</p>
+                        </div>
+                      </div>
+                      <input
+                        type="password"
+                        value={aiKeyInput}
+                        onChange={e => setAiKeyInput(e.target.value)}
+                        placeholder="Paste your API key…"
+                        className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 outline-none"
+                        onKeyDown={e => {
+                          if (e.key === 'Enter' && aiKeyInput.trim()) {
+                            saveApiKey(currentProject?.aiModel ?? 'openai', aiKeyInput.trim());
+                            runAiGeneration(aiKeyInput.trim());
+                          }
+                        }}
+                      />
+                      <div className="flex space-x-3">
+                        <button
+                          onClick={() => setAiKeyPrompt(false)}
+                          className="flex-1 py-2.5 rounded-xl text-sm font-medium bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                        >
+                          Skip
+                        </button>
+                        <button
+                          disabled={!aiKeyInput.trim()}
+                          onClick={() => {
+                            saveApiKey(currentProject?.aiModel ?? 'openai', aiKeyInput.trim());
+                            runAiGeneration(aiKeyInput.trim());
+                          }}
+                          className="flex-1 py-2.5 rounded-xl text-sm font-bold bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:from-purple-700 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow"
+                        >
+                          Generate
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Regenerate button for AI projects */}
+                {currentProject?.useAiArchitecture && !isGeneratingAI && !aiKeyPrompt && (
+                  <div className="absolute bottom-4 left-4 z-30">
+                    <button
+                      onClick={() => {
+                        const apiKey = getStoredApiKey(currentProject.aiModel ?? 'openai');
+                        if (!apiKey) { setAiKeyInput(''); setAiKeyPrompt(true); return; }
+                        aiGeneratedRef.current = false;
+                        runAiGeneration(apiKey);
+                      }}
+                      className="flex items-center space-x-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white px-4 py-2.5 rounded-xl shadow-lg text-sm font-semibold transition-all hover:scale-105"
+                      title="Regenerate AI Architecture"
+                    >
+                      <RefreshCw className="w-4 h-4" />
+                      <span>Regenerate</span>
+                    </button>
+                  </div>
+                )}
+
                 {selectedComponent && !isMobile && (
                   <div className="absolute bottom-4 right-4 z-50">
                     <button
