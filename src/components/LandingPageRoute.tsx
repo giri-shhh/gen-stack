@@ -11,32 +11,66 @@ export default function LandingPageRoute() {
         handleGetStarted,
         handleContinueAsTemp,
         handleGetStartedSignUp,
-        handleAuthSuccess,
         setGetStartedModalOpen,
         setAuthModalOpen,
-    } = useAppContext();
+        setUser,
+        setAuthModalMode,
+    } = useAppContext() as any;
+
+    const onLocalAuthSuccess = (userObj: any) => {
+        localStorage.setItem('user', JSON.stringify(userObj));
+        if (setUser) {
+            setUser(userObj);
+        } else {
+            window.location.reload();
+        }
+        setAuthModalOpen(false);
+        setGetStartedModalOpen(false);
+    };
+
+    const onLocalContinueAsTemp = () => {
+        const tempUser = {
+            id: `temp_${Date.now()}`,
+            name: 'Temporary User',
+            email: '',
+            avatar: `https://ui-avatars.com/api/?name=Temporary+User&background=6366f1&color=fff`,
+            isTemporary: true
+        };
+        localStorage.setItem('user', JSON.stringify(tempUser));
+        if (setUser) setUser(tempUser);
+        else window.location.reload();
+        setGetStartedModalOpen(false);
+    };
 
     return (
         <>
             <LandingPage
-                onGetStarted={handleGetStarted} onSignIn={function (): void {
-                    throw new Error('Function not implemented.');
-                } } onSignUp={function (): void {
-                    throw new Error('Function not implemented.');
-                } }            />
+                onGetStarted={handleGetStarted} 
+                onSignIn={() => {
+                    if (setAuthModalMode) setAuthModalMode('signin');
+                    setAuthModalOpen(true);
+                }} 
+                onSignUp={() => {
+                    if (handleGetStartedSignUp) handleGetStartedSignUp();
+                    else {
+                        if (setAuthModalMode) setAuthModalMode('signup');
+                        setAuthModalOpen(true);
+                    }
+                }}            
+            />
             <GetStartedModal
                 isOpen={getStartedModalOpen}
                 onClose={() => setGetStartedModalOpen(false)}
                 onSignUp={handleGetStartedSignUp}
-                onContinueAsTemp={handleContinueAsTemp}
-                onAuthSuccess={handleAuthSuccess}
+                onContinueAsTemp={onLocalContinueAsTemp}
+                onAuthSuccess={onLocalAuthSuccess}
             />
             {authModalOpen && (
                 <AuthModal
                     isOpen={authModalOpen}
                     mode={authModalMode}
                     onClose={() => setAuthModalOpen(false)}
-                    onAuthSuccess={handleAuthSuccess}
+                    onAuthSuccess={onLocalAuthSuccess}
                 />
             )}
         </>

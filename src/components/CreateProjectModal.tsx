@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { X, Folder, Sparkles, Rocket, ArrowRight, Lightbulb, Zap, Github, Globe, Tag, BrainCircuit, Key } from 'lucide-react';
+import { X, Folder, Sparkles, Rocket, ArrowRight, Lightbulb, Zap, Github, Globe, Tag, BrainCircuit, Key, Server } from 'lucide-react';
 import type { CreateProjectModalProps, Project } from '../types';
 import { getStoredApiKey, saveApiKey } from '../lib/aiArchitectureGenerator';
 
-type AiModel = 'openai' | 'anthropic' | 'gemini';
+type AiModel = 'openai' | 'anthropic' | 'gemini' | 'local';
 
 const AI_MODELS: Array<{ id: AiModel; label: string; hint: string; placeholder: string; docsUrl: string }> = [
   {
@@ -27,6 +27,13 @@ const AI_MODELS: Array<{ id: AiModel; label: string; hint: string; placeholder: 
     placeholder: 'AIza...',
     docsUrl: 'https://aistudio.google.com/app/apikey',
   },
+  {
+    id: 'local',
+    label: 'Local Model',
+    hint: 'Connect to a locally running model via OpenAI-compatible API (Ollama, LM Studio, etc.).',
+    placeholder: '',
+    docsUrl: '',
+  },
 ];
 
 const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ isOpen, onClose, onCreateProject }) => {
@@ -37,6 +44,8 @@ const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ isOpen, onClose
   const [useAiArchitecture, setUseAiArchitecture] = useState(false);
   const [aiModel, setAiModel] = useState<AiModel>('openai');
   const [aiApiKey, setAiApiKey] = useState(() => getStoredApiKey('openai'));
+  const [localBaseUrl, setLocalBaseUrl] = useState(() => localStorage.getItem('aiLocalBaseUrl') || 'http://localhost:11434/v1');
+  const [localModelName, setLocalModelName] = useState(() => localStorage.getItem('aiLocalModelName') || 'llama3.2');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -88,8 +97,15 @@ const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ isOpen, onClose
       }
 
       if (useAiArchitecture) {
-        if (!aiApiKey.trim()) throw new Error('API key is required when AI architecture generation is enabled');
-        saveApiKey(aiModel, aiApiKey.trim());
+        if (aiModel === 'local') {
+          if (!localBaseUrl.trim()) throw new Error('Base URL is required for local model');
+          if (!localModelName.trim()) throw new Error('Model name is required for local model');
+          localStorage.setItem('aiLocalBaseUrl', localBaseUrl.trim());
+          localStorage.setItem('aiLocalModelName', localModelName.trim());
+        } else {
+          if (!aiApiKey.trim()) throw new Error('API key is required when AI architecture generation is enabled');
+          saveApiKey(aiModel, aiApiKey.trim());
+        }
       }
 
       const newProject: Project = {
@@ -104,6 +120,8 @@ const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ isOpen, onClose
         status: 'draft' as const,
         useAiArchitecture,
         aiModel: useAiArchitecture ? aiModel : undefined,
+        aiLocalUrl: useAiArchitecture && aiModel === 'local' ? localBaseUrl.trim() : undefined,
+        aiLocalModelName: useAiArchitecture && aiModel === 'local' ? localModelName.trim() : undefined,
       };
 
       await onCreateProject(newProject);
@@ -265,7 +283,7 @@ const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ isOpen, onClose
                       <BrainCircuit className="w-4 h-4 text-purple-500" />
                       <span>AI Model</span>
                     </label>
-                    <div className="grid grid-cols-3 gap-2">
+                    <div className="grid grid-cols-2 gap-2">
                       {AI_MODELS.map(m => (
                         <button
                           key={m.id}
@@ -273,21 +291,58 @@ const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ isOpen, onClose
                           disabled={loading}
                           onClick={() => {
                             setAiModel(m.id);
-                            setAiApiKey(getStoredApiKey(m.id));
+                            if (m.id !== 'local') setAiApiKey(getStoredApiKey(m.id));
                           }}
-                          className={`py-2.5 px-3 rounded-xl text-xs font-semibold border-2 transition-all duration-150 ${
+                          className={`py-2.5 px-3 rounded-xl text-xs font-semibold border-2 transition-all duration-150 flex items-center justify-center gap-1.5 ${
                             aiModel === m.id
                               ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300'
                               : 'border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-400 hover:border-purple-300 dark:hover:border-purple-600'
                           }`}
                         >
+                          {m.id === 'local' && <Server className="w-3 h-3 flex-shrink-0" />}
                           {m.label}
                         </button>
                       ))}
                     </div>
                   </div>
 
-                  {/* API Key */}
+                  {/* Local model config */}
+                  {aiModel === 'local' ? (
+                    <div className="space-y-3">
+                      <div className="space-y-2">
+                        <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
+                          <Server className="w-4 h-4 text-purple-500" />
+                          <span>Base URL</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={localBaseUrl}
+                          onChange={e => setLocalBaseUrl(e.target.value)}
+                          disabled={loading}
+                          placeholder="http://localhost:11434/v1"
+                          className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 text-sm shadow-sm font-mono"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
+                          <BrainCircuit className="w-4 h-4 text-purple-500" />
+                          <span>Model Name</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={localModelName}
+                          onChange={e => setLocalModelName(e.target.value)}
+                          disabled={loading}
+                          placeholder="llama3.2"
+                          className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 text-sm shadow-sm font-mono"
+                        />
+                      </div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        Connects to any OpenAI-compatible local server (Ollama, LM Studio, Jan, etc.). Make sure the server is running and CORS is enabled. Settings are stored locally.
+                      </p>
+                    </div>
+                  ) : (
+                  /* API Key */
                   <div className="space-y-2">
                     <label className="flex items-center space-x-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
                       <Key className="w-4 h-4 text-purple-500" />
@@ -315,6 +370,7 @@ const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ isOpen, onClose
                       . Your key is stored locally only.
                     </p>
                   </div>
+                  )}
                 </div>
               )}
             </div>

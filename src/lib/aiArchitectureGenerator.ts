@@ -158,6 +158,25 @@ async function callGemini(prompt: string, apiKey: string): Promise<AIResponse> {
   return parseJSON(data.candidates[0].content.parts[0].text);
 }
 
+async function callLocalModel(prompt: string, baseUrl: string, modelName: string): Promise<AIResponse> {
+  const url = baseUrl.replace(/\/$/, '') + '/chat/completions';
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: modelName,
+      messages: [{ role: 'user', content: prompt }],
+      response_format: { type: 'json_object' },
+    }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(`Local model error: ${(err as any).error?.message ?? res.statusText}`);
+  }
+  const data = await res.json();
+  return parseJSON(data.choices[0].message.content);
+}
+
 // ── LocalStorage key helpers ──────────────────────────────────────────────────
 export function getApiKeyStorageKey(model: string): string {
   return `aiApiKey_${model}`;
@@ -186,6 +205,10 @@ export async function generateArchitecture(
     aiResponse = await callAnthropic(prompt, apiKey);
   } else if (model === 'gemini') {
     aiResponse = await callGemini(prompt, apiKey);
+  } else if (model === 'local') {
+    const baseUrl = project.aiLocalUrl ?? 'http://localhost:11434/v1';
+    const modelName = project.aiLocalModelName ?? 'llama3.2';
+    aiResponse = await callLocalModel(prompt, baseUrl, modelName);
   } else {
     throw new Error(`Unknown AI model: ${model}`);
   }

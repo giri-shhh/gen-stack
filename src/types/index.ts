@@ -27,7 +27,9 @@ export interface Project {
   isFavorite?: boolean;
   tags?: string[];
   useAiArchitecture?: boolean;
-  aiModel?: 'openai' | 'anthropic' | 'gemini';
+  aiModel?: 'openai' | 'anthropic' | 'gemini' | 'local';
+  aiLocalUrl?: string;
+  aiLocalModelName?: string;
 }
 
 // Canvas component types
@@ -49,6 +51,7 @@ export interface Connection {
   source: string;
   target: string;
   type: string;
+  label?: string;
 }
 
 // Canvas state types

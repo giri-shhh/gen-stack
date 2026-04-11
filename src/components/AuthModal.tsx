@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Eye, EyeOff, Mail, Lock, User, Sparkles, AlertCircle } from 'lucide-react';
+import { X, Eye, EyeOff, Mail, Lock, User, Sparkles, AlertCircle, Github } from 'lucide-react';
 import { useGoogleLogin } from '@react-oauth/google';
 import type { AuthModalProps } from '../types';
 
@@ -94,6 +94,19 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, mode = 'signin', onClose,
     },
   });
 
+  const handleGithubLogin = () => {
+    // Mock fallback for GitHub
+    const user = {
+      id: `github_${Date.now()}`,
+      name: 'GitHub User',
+      email: 'user@github.com',
+      avatar: `https://ui-avatars.com/api/?name=GitHub+User&background=24292e&color=fff`,
+    };
+    localStorage.setItem('user', JSON.stringify(user));
+    onAuthSuccess(user);
+    onClose();
+  };
+
   const isGoogleConfigured = Boolean(GOOGLE_CLIENT_ID);
 
   return (
@@ -124,7 +137,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, mode = 'signin', onClose,
         </div>
 
         {/* Google Sign-In button */}
-        <div className="mb-5">
+        <div className="mb-5 space-y-3">
           {isGoogleConfigured ? (
             <button
               type="button"
@@ -166,6 +179,16 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, mode = 'signin', onClose,
               </span>
             </div>
           )}
+
+          {/* GitHub Sign-In button */}
+          <button
+            type="button"
+            onClick={handleGithubLogin}
+            className="w-full bg-[#24292F] text-white px-4 py-3 rounded-xl font-semibold hover:bg-[#24292F]/90 transition-all duration-200 flex items-center justify-center space-x-3"
+          >
+            <Github className="w-5 h-5" />
+            <span>Continue with GitHub</span>
+          </button>
         </div>
 
         {/* Divider */}
