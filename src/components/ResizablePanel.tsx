@@ -24,6 +24,9 @@ const ResizablePanel: React.FC<ResizablePanelProps> = ({
   const startWidthRef = useRef<number>(0);
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    // Disable resizing on mobile/touch devices
+    if (window.innerWidth < 768 || e.touches) return;
+    
     console.log('Resize handle clicked:', side, e.clientX);
     e.preventDefault();
     e.stopPropagation();
@@ -95,7 +98,7 @@ const ResizablePanel: React.FC<ResizablePanelProps> = ({
       <div
         style={resizeHandleStyle}
         onMouseDown={handleMouseDown}
-        className="hover:bg-blue-300 hover:bg-opacity-50 group resize-handle"
+        className="hidden md:block hover:bg-blue-300 hover:bg-opacity-50 group resize-handle"
         title={`Drag to resize ${side === 'left' ? 'sidebar' : 'properties panel'}`}
       >
         {/* Visual indicator dots */}

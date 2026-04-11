@@ -53,6 +53,10 @@ export default function EditorPage({ user, currentProject, setCurrentProject, on
   const [toast, setToast] = useState<ToastType | null>(null);
   const [showExportModal, setShowExportModal] = useState(false);
 
+  // Mobile state
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [mobilePanel, setMobilePanel] = useState<'canvas' | 'sidebar' | 'properties'>('canvas');
+
   // Canvas state
   const {
     components,
@@ -72,6 +76,15 @@ export default function EditorPage({ user, currentProject, setCurrentProject, on
   useEffect(() => {
     console.log('App: Selected component changed:', selectedComponent);
   }, [selectedComponent]);
+
+  // Handle window resize for mobile detection
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Drag and drop state
   const [draggedTech, setDraggedTech] = useState<Technology | null>(null);
@@ -435,67 +448,111 @@ export default function EditorPage({ user, currentProject, setCurrentProject, on
             />
           )}
           
-          <div className="flex flex-1 overflow-hidden flex-layout">
-            <ResizablePanel
-              side="left"
-              defaultWidth={sidebarWidth}
-              minWidth={250}
-              maxWidth={500}
-              onResize={handleSidebarResize}
-            >
-              <div className="h-full bg-white border-r border-gray-200 overflow-y-auto">
-                <Sidebar 
-                  currentProject={currentProject || undefined}
-                  onProjectUpdate={(updates) => {
-                    if (currentProject) {
-                      setCurrentProject({ ...currentProject, ...updates });
-                    }
-                  }}
-                />
-              </div>
-            </ResizablePanel>
-            
-            <div className={`relative flex-1 min-w-0 canvas-container ${selectedComponent ? 'canvas-with-panel' : ''}`}>
-              <Canvas
-                components={components}
-                connections={connections}
-                selectedComponent={selectedComponent || undefined}
-                onComponentSelect={setSelectedComponent}
-                onComponentUpdate={updateComponent}
-                onComponentRemove={removeComponent}
-                onConnectionAdd={(connection: Connection) => addConnection(connection.source, connection.target)}
-                onConnectionRemove={removeConnection}
-                onCanvasClick={clearSelection}
-                onAddComponent={addComponent}
-                draggedTech={draggedTech || undefined}
-                onComponentDoubleClick={handleComponentDoubleClick}
-                onViewProjectStructure={handleViewProjectStructure}
-              />
-              
+          {/* Mobile Panel Selector */}
+          {isMobile && (
+            <div className="flex border-b border-gray-200 bg-white gap-1 p-1 overflow-x-auto">
+              <button
+                onClick={() => setMobilePanel('canvas')}
+                className={`flex-1 px-2 py-1.5 text-sm rounded-md whitespace-nowrap transition-colors ${
+                  mobilePanel === 'canvas'
+                    ? 'bg-blue-100 text-blue-700 font-medium'
+                    : 'text-gray-600 hover:bg-gray-100'
+                }`}
+              >
+                Canvas
+              </button>
+              <button
+                onClick={() => setMobilePanel('sidebar')}
+                className={`flex-1 px-2 py-1.5 text-sm rounded-md whitespace-nowrap transition-colors ${
+                  mobilePanel === 'sidebar'
+                    ? 'bg-blue-100 text-blue-700 font-medium'
+                    : 'text-gray-600 hover:bg-gray-100'
+                }`}
+              >
+                Components
+              </button>
               {selectedComponent && (
-                <div className="absolute bottom-4 right-4 z-50">
-                  <button
-                    onClick={() => {
-                      const propertiesPanel = document.querySelector('[data-properties-panel]');
-                      if (propertiesPanel) {
-                        propertiesPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                      }
-                    }}
-                    className="bg-green-600 hover:bg-green-700 text-white p-3 rounded-full shadow-lg transition-all duration-200 hover:scale-110"
-                    title="Open Properties Panel (Press 'P' key)"
-                  >
-                    <Settings className="w-5 h-5" />
-                  </button>
-                </div>
+                <button
+                  onClick={() => setMobilePanel('properties')}
+                  className={`flex-1 px-2 py-1.5 text-sm rounded-md whitespace-nowrap transition-colors ${
+                    mobilePanel === 'properties'
+                      ? 'bg-blue-100 text-blue-700 font-medium'
+                      : 'text-gray-600 hover:bg-gray-100'
+                  }`}
+                >
+                  Properties
+                </button>
               )}
             </div>
+          )}
+          <div className="flex flex-1 overflow-hidden flex-layout">
+            {/* Sidebar - Hide on mobile or show based on panel selection */}
+            {(!isMobile || mobilePanel === 'sidebar') && (
+              <ResizablePanel
+                side="left"
+                defaultWidth={isMobile ? window.innerWidth - 40 : sidebarWidth}
+                minWidth={250}
+                maxWidth={isMobile ? window.innerWidth - 40 : 500}
+                onResize={handleSidebarResize}
+              >
+                <div className="h-full bg-white border-r border-gray-200 overflow-y-auto">
+                  <Sidebar 
+                    currentProject={currentProject || undefined}
+                    onProjectUpdate={(updates) => {
+                      if (currentProject) {
+                        setCurrentProject({ ...currentProject, ...updates });
+                      }
+                    }}
+                  />
+                </div>
+              </ResizablePanel>
+            )}
             
-            {selectedComponent && (
+            {/* Canvas - Hide on mobile or show based on panel selection */}
+            {(!isMobile || mobilePanel === 'canvas') && (
+              <div className="relative flex-1 min-w-0 canvas-container">
+                <Canvas
+                  components={components}
+                  connections={connections}
+                  selectedComponent={selectedComponent || undefined}
+                  onComponentSelect={setSelectedComponent}
+                  onComponentUpdate={updateComponent}
+                  onComponentRemove={removeComponent}
+                  onConnectionAdd={(connection: Connection) => addConnection(connection.source, connection.target)}
+                  onConnectionRemove={removeConnection}
+                  onCanvasClick={clearSelection}
+                  onAddComponent={addComponent}
+                  draggedTech={draggedTech || undefined}
+                  onComponentDoubleClick={handleComponentDoubleClick}
+                  onViewProjectStructure={handleViewProjectStructure}
+                />
+                
+                {selectedComponent && !isMobile && (
+                  <div className="absolute bottom-4 right-4 z-50">
+                    <button
+                      onClick={() => {
+                        const propertiesPanel = document.querySelector('[data-properties-panel]');
+                        if (propertiesPanel) {
+                          propertiesPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                        }
+                      }}
+                      className="bg-green-600 hover:bg-green-700 text-white p-3 rounded-full shadow-lg transition-all duration-200 hover:scale-110"
+                      title="Open Properties Panel (Press 'P' key)"
+                    >
+                      <Settings className="w-5 h-5" />
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+            
+            {/* Properties Panel - Hide on mobile or show based on panel selection */}
+            {selectedComponent && (!isMobile || mobilePanel === 'properties') && (
               <ResizablePanel
                 side="right"
-                defaultWidth={propertiesPanelWidth}
+                defaultWidth={isMobile ? window.innerWidth - 40 : propertiesPanelWidth}
                 minWidth={280}
-                maxWidth={600}
+                maxWidth={isMobile ? window.innerWidth - 40 : 600}
                 onResize={handlePropertiesPanelResize}
               >
                 <div className="h-full bg-white border-l border-gray-200 overflow-y-auto properties-panel-visible" data-properties-panel>

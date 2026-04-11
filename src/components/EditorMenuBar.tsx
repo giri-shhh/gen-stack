@@ -60,25 +60,25 @@ const EditorMenuBar: React.FC<EditorMenuBarProps> = ({
   };
 
   return ( 
-    <div className="h-14 bg-white border-b border-gray-200 px-4 flex items-center justify-between gap-4 shadow-sm">
+    <div className="h-14 bg-white border-b border-gray-200 px-2 sm:px-4 flex items-center justify-between gap-1 sm:gap-4 shadow-sm overflow-x-auto">
       {/* Left section - Main actions */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
         {/* Save button */}
         <button
           onClick={handleSave}
           disabled={isSaving}
-          className="relative group flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 hover:text-blue-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 border border-blue-200"
+          className="relative group flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 hover:text-blue-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 border border-blue-200 whitespace-nowrap"
           title="Save project (Ctrl+S)"
         >
           {isSaving ? (
             <>
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-              <span className="text-sm font-medium">Saving...</span>
+              <div className="animate-spin rounded-full h-3 w-3 sm:h-4 sm:w-4 border-b-2 border-blue-600"></div>
+              <span className="text-xs sm:text-sm font-medium hidden sm:inline">Saving...</span>
             </>
           ) : (
             <>
-              <Save className="w-4 h-4" />
-              <span className="text-sm font-medium">Save</span>
+              <Save className="w-3 h-3 sm:w-4 sm:h-4" />
+              <span className="text-xs sm:text-sm font-medium hidden sm:inline">Save</span>
             </>
           )}
           <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
@@ -89,11 +89,11 @@ const EditorMenuBar: React.FC<EditorMenuBarProps> = ({
         {/* Clone button */}
         <button
           onClick={onClone}
-          className="relative group flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100 text-gray-700 hover:text-gray-900 transition-all duration-200 border border-gray-200"
+          className="relative group flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 rounded-lg hover:bg-gray-100 text-gray-700 hover:text-gray-900 transition-all duration-200 border border-gray-200 whitespace-nowrap"
           title="Clone project"
         >
-          <Copy className="w-4 h-4" />
-          <span className="text-sm font-medium">Clone</span>
+          <Copy className="w-3 h-3 sm:w-4 sm:h-4" />
+          <span className="text-xs sm:text-sm font-medium hidden sm:inline">Clone</span>
           <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
             Duplicate project
           </span>
@@ -102,60 +102,62 @@ const EditorMenuBar: React.FC<EditorMenuBarProps> = ({
         {/* Export button */}
         <button
           onClick={onExport}
-          className="relative group flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-100 text-gray-700 hover:text-gray-900 transition-all duration-200 border border-gray-200"
+          className="relative group flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 rounded-lg hover:bg-gray-100 text-gray-700 hover:text-gray-900 transition-all duration-200 border border-gray-200 whitespace-nowrap"
           title="Export project"
         >
-          <Download className="w-4 h-4" />
-          <span className="text-sm font-medium">Export</span>
+          <Download className="w-3 h-3 sm:w-4 sm:h-4" />
+          <span className="text-xs sm:text-sm font-medium hidden sm:inline">Export</span>
           <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
             Download project files
           </span>
         </button>
 
         {/* Divider */}
-        <div className="h-6 border-l border-gray-300 mx-1"></div>
+        <div className="h-6 border-l border-gray-300 mx-1 hidden sm:block"></div>
 
         {/* Delete button */}
         <button
           onClick={handleDelete}
-          className="relative group flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-red-50 text-red-600 hover:text-red-700 transition-all duration-200 border border-red-200"
+          className="relative group flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-2 rounded-lg hover:bg-red-50 text-red-600 hover:text-red-700 transition-all duration-200 border border-red-200 whitespace-nowrap"
           title="Delete project"
         >
-          <Trash2 className="w-4 h-4" />
-          <span className="text-sm font-medium">Delete</span>
+          <Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />
+          <span className="text-xs sm:text-sm font-medium hidden sm:inline">Delete</span>
           <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
             Remove project
           </span>
         </button>
       </div>
 
-      {/* Center section - Project stats */}
-      <div className="flex-1 flex justify-center items-center gap-4">
+      {/* Center section - Project stats - Hidden on mobile */}
+      <div className="flex-1 flex justify-center items-center gap-2 sm:gap-4 hidden md:flex">
         {/* Stats */}
-        <div className="flex items-center gap-3 text-xs text-gray-600 bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-200">
+        <div className="flex items-center gap-2 sm:gap-3 text-xs text-gray-600 bg-gray-50 px-2 sm:px-3 py-1.5 rounded-lg border border-gray-200">
           <div className="flex items-center gap-1">
             <span className="font-semibold text-gray-700">{components.length}</span>
-            <span>Components</span>
+            <span className="hidden sm:inline">Components</span>
+            <span className="sm:hidden">Comp</span>
           </div>
-          <div className="h-3 border-l border-gray-300"></div>
+          <div className="h-3 border-l border-gray-300 hidden sm:block"></div>
           <div className="flex items-center gap-1">
             <span className="font-semibold text-gray-700">{connections.length}</span>
-            <span>Connections</span>
+            <span className="hidden sm:inline">Connections</span>
+            <span className="sm:hidden">Conn</span>
           </div>
         </div>
       </div>
 
       {/* Right section - Edit and View options */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
         {/* Undo button */}
         {onUndo && (
           <button
             onClick={onUndo}
             disabled={!canUndo}
-            className="relative group p-2 rounded-lg hover:bg-gray-100 text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 border border-gray-200"
+            className="relative group p-1.5 sm:p-2 rounded-lg hover:bg-gray-100 text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 border border-gray-200"
             title="Undo (Ctrl+Z)"
           >
-            <Undo2 className="w-4 h-4" />
+            <Undo2 className="w-3 h-3 sm:w-4 sm:h-4" />
             <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
               Undo
             </span>
@@ -167,10 +169,10 @@ const EditorMenuBar: React.FC<EditorMenuBarProps> = ({
           <button
             onClick={onRedo}
             disabled={!canRedo}
-            className="relative group p-2 rounded-lg hover:bg-gray-100 text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 border border-gray-200"
+            className="relative group p-1.5 sm:p-2 rounded-lg hover:bg-gray-100 text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 border border-gray-200"
             title="Redo (Ctrl+Y)"
           >
-            <Redo2 className="w-4 h-4" />
+            <Redo2 className="w-3 h-3 sm:w-4 sm:h-4" />
             <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
               Redo
             </span>
@@ -178,16 +180,16 @@ const EditorMenuBar: React.FC<EditorMenuBarProps> = ({
         )}
 
         {/* Divider */}
-        <div className="h-6 border-l border-gray-300 mx-1"></div>
+        <div className="h-6 border-l border-gray-300 mx-1 hidden sm:block"></div>
 
         {/* Info button */}
         <div className="relative">
           <button
             onClick={() => setShowInfo(!showInfo)}
-            className="relative group p-2 rounded-lg hover:bg-gray-100 text-gray-700 transition-all duration-200 border border-gray-200"
+            className="relative group p-1.5 sm:p-2 rounded-lg hover:bg-gray-100 text-gray-700 transition-all duration-200 border border-gray-200"
             title="Project information"
           >
-            <Info className="w-4 h-4" />
+            <Info className="w-3 h-3 sm:w-4 sm:h-4" />
             <span className="absolute bottom-full right-0 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
               Project info
             </span>
@@ -195,7 +197,7 @@ const EditorMenuBar: React.FC<EditorMenuBarProps> = ({
 
           {/* Info panel */}
           {showInfo && (
-            <div className="absolute right-0 mt-2 w-72 bg-white rounded-lg shadow-lg border border-gray-200 p-4 text-sm z-50">
+            <div className="absolute right-0 mt-2 w-64 sm:w-72 bg-white rounded-lg shadow-lg border border-gray-200 p-3 sm:p-4 text-xs sm:text-sm z-50 max-h-96 overflow-y-auto">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="font-semibold text-gray-900">Project Information</h3>
                 <button
@@ -246,10 +248,10 @@ const EditorMenuBar: React.FC<EditorMenuBarProps> = ({
         <div className="relative">
           <button
             onClick={() => setShowMoreMenu(!showMoreMenu)}
-            className="relative group p-2 rounded-lg hover:bg-gray-100 text-gray-700 transition-all duration-200 border border-gray-200"
+            className="relative group p-1.5 sm:p-2 rounded-lg hover:bg-gray-100 text-gray-700 transition-all duration-200 border border-gray-200"
             title="More options"
           >
-            <MoreVertical className="w-4 h-4" />
+            <MoreVertical className="w-3 h-3 sm:w-4 sm:h-4" />
             <span className="absolute bottom-full right-0 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
               More options
             </span>
@@ -257,7 +259,7 @@ const EditorMenuBar: React.FC<EditorMenuBarProps> = ({
 
           {/* More menu dropdown */}
           {showMoreMenu && (
-            <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
+            <div className="absolute right-0 mt-2 w-40 sm:w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 sm:py-2 z-50">
               <a
                 href="#"
                 onClick={(e) => {

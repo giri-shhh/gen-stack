@@ -57,9 +57,9 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onCreateNewProject, onLogou
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50/30 to-indigo-50/20">
-      <main className="w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+      <main className="w-full mx-auto px-2 sm:px-4 lg:px-6 xl:px-8 py-3 sm:py-4 lg:py-6 space-y-3 sm:space-y-4 lg:space-y-6">
         {/* User Profile Section */}
-        <div className="relative backdrop-blur-sm bg-white/70 rounded-2xl shadow-lg border border-white/20 p-6 z-10">
+        <div className="relative backdrop-blur-sm bg-white/70 rounded-lg sm:rounded-2xl shadow-lg border border-white/20 p-3 sm:p-4 lg:p-6 z-10">
           <UserProfile 
           user={user} 
           onLogout={onLogout} 
@@ -79,13 +79,12 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onCreateNewProject, onLogou
         />
 
         {/* Recent Projects Section */}
-        <div className="relative bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl border border-white/20 overflow-hidden z-0">
-          {/* Header */}
-          <div className="p-6 border-b border-gray-200">
-            <div className="flex items-center justify-between">
+        <div className="relative bg-white/90 backdrop-blur-sm rounded-lg sm:rounded-2xl shadow-xl border border-white/20 overflow-hidden z-0">
+        <div className="p-3 sm:p-4 lg:p-6 border-b border-gray-200">
+          <div className="flex items-center justify-between gap-2 sm:gap-4 flex-wrap">
               <div>
-                <h2 className="text-xl font-semibold text-gray-900">Recent Projects</h2>
-                <p className="text-sm text-gray-600 mt-1">
+                <h2 className="text-lg sm:text-xl font-semibold text-gray-900">Recent Projects</h2>
+                <p className="text-xs sm:text-sm text-gray-600 mt-1">
                   {filteredAndSortedProjects.length} project{filteredAndSortedProjects.length !== 1 ? 's' : ''}
                 </p>
               </div>
