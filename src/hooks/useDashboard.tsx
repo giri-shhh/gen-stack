@@ -80,8 +80,10 @@ export const useDashboard = () => {
   const filteredAndSortedProjects = useMemo(() => {
     let filtered = recentProjects;
 
-    // Apply status filter
-    if (currentFilter !== 'all') {
+    // Apply status / special filter
+    if (currentFilter === 'favorites') {
+      filtered = filtered.filter(project => project.isFavorite);
+    } else if (currentFilter !== 'all') {
       filtered = filtered.filter(project => project.status === currentFilter);
     }
 

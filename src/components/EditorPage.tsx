@@ -10,6 +10,7 @@ import ResizablePanel from './ResizablePanel';
 import Header from './Header';
 import Toast from './Toast';
 import ExportModal from './ExportModal';
+import ModuleConfigScreen from './ModuleConfigScreen';
 import { useCanvasState } from '../hooks/useCanvasState';
 import { getTechById } from '../data/techStack';
 import type { 
@@ -93,6 +94,7 @@ export default function EditorPage({ user, currentProject, setCurrentProject, on
   const [showProjectPreview, setShowProjectPreview] = useState(false);
   const [previewComponent, setPreviewComponent] = useState<CanvasComponent | null>(null);
   const [isPropertiesPanelPopup, setIsPropertiesPanelPopup] = useState(false);
+  const [showModuleConfig, setShowModuleConfig] = useState(false);
 
   // Panel width state
   const [sidebarWidth, setSidebarWidth] = useState(() => {
@@ -345,7 +347,7 @@ export default function EditorPage({ user, currentProject, setCurrentProject, on
       if (tech) {
         setDraggedTech(tech);
         setDragOverlayContent(
-          <div className="bg-white border border-gray-200 rounded-lg p-3 shadow-lg">
+          <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-3 shadow-lg">
             <div className="flex items-center space-x-2">
               {tech.logo && <tech.logo className="w-5 h-5 text-blue-500" />}
               <span className="font-medium text-sm">{tech.name}</span>
@@ -426,7 +428,7 @@ export default function EditorPage({ user, currentProject, setCurrentProject, on
         onDragCancel={handleDragCancel}
         collisionDetection={closestCenter}
       >
-        <div className="h-screen flex flex-col bg-gray-50">
+        <div className="h-screen flex flex-col bg-gray-50 dark:bg-gray-900">
           <Header 
             onBackToLanding={handleBackToLanding} 
             user={user || undefined} 
@@ -440,13 +442,13 @@ export default function EditorPage({ user, currentProject, setCurrentProject, on
           
           {/* Mobile Panel Selector */}
           {isMobile && (
-            <div className="flex border-b border-gray-200 bg-white gap-1 p-1 overflow-x-auto">
+            <div className="flex border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 gap-1 p-1 overflow-x-auto">
               <button
                 onClick={() => setMobilePanel('canvas')}
                 className={`flex-1 px-2 py-1.5 text-sm rounded-md whitespace-nowrap transition-colors ${
                   mobilePanel === 'canvas'
-                    ? 'bg-blue-100 text-blue-700 font-medium'
-                    : 'text-gray-600 hover:bg-gray-100'
+                    ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 font-medium'
+                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
                 }`}
               >
                 Canvas
@@ -485,7 +487,7 @@ export default function EditorPage({ user, currentProject, setCurrentProject, on
                 maxWidth={isMobile ? window.innerWidth - 40 : 500}
                 onResize={handleSidebarResize}
               >
-                <div className="h-full bg-white border-r border-gray-200 overflow-y-auto">
+                <div className="h-full bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 overflow-y-auto">
                   <Sidebar 
                     currentProject={currentProject || undefined}
                     onProjectUpdate={(updates) => {
@@ -545,7 +547,7 @@ export default function EditorPage({ user, currentProject, setCurrentProject, on
                 maxWidth={isMobile ? window.innerWidth - 40 : 600}
                 onResize={handlePropertiesPanelResize}
               >
-                <div className="h-full bg-white border-l border-gray-200 overflow-y-auto overflow-x-hidden properties-panel-visible" data-properties-panel>
+                <div className="h-full bg-white dark:bg-gray-800 border-l border-gray-200 dark:border-gray-700 overflow-y-auto overflow-x-hidden properties-panel-visible" data-properties-panel>
                   <PropertiesPanel
                     selectedComponent={selectedComponent}
                     onComponentUpdate={updateComponent}
@@ -559,6 +561,7 @@ export default function EditorPage({ user, currentProject, setCurrentProject, on
                     previewComponent={previewComponent}
                     isPopupMode={isPropertiesPanelPopup}
                     setIsPopupMode={handlePropertiesPanelPopupToggle}
+                    onOpenModuleConfig={() => setShowModuleConfig(true)}
                   />
                 </div>
               </ResizablePanel>
@@ -578,13 +581,23 @@ export default function EditorPage({ user, currentProject, setCurrentProject, on
           />
         )}
         
-        <ExportModal 
+        <ExportModal
           isOpen={showExportModal}
           onClose={() => setShowExportModal(false)}
           components={components}
           connections={connections}
           currentProject={currentProject || undefined}
         />
+
+        {showModuleConfig && selectedComponent && (
+          <ModuleConfigScreen
+            component={selectedComponent}
+            components={components}
+            connections={connections}
+            onComponentUpdate={updateComponent}
+            onClose={() => setShowModuleConfig(false)}
+          />
+        )}
       </DndContext>
     </>
   );

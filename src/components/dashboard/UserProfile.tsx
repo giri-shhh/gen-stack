@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Settings, LogOut, Bell, Sparkles, Zap, Search, Filter, X } from 'lucide-react';
+import { Settings, LogOut, Bell, Sparkles, Zap, Search, Filter, X, Sun, Moon } from 'lucide-react';
 import type { User } from '../../types';
+import { useTheme } from '../../contexts/ThemeContext';
 
 interface UserProfileProps {
   user: User;
@@ -9,12 +10,13 @@ interface UserProfileProps {
   searchPlaceholder?: string;
 }
 
-const UserProfile: React.FC<UserProfileProps> = ({ 
-  user, 
-  onLogout, 
+const UserProfile: React.FC<UserProfileProps> = ({
+  user,
+  onLogout,
   onSearch,
   searchPlaceholder = "Search projects, templates, and more..."
 }) => {
+  const { theme, toggleTheme } = useTheme();
   const [showNotifications, setShowNotifications] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearchFilters, setShowSearchFilters] = useState(false);
@@ -38,7 +40,7 @@ const UserProfile: React.FC<UserProfileProps> = ({
           <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
             Fullstack Gen
           </h1>
-          <p className="text-sm text-gray-500 font-medium">Design and build your application</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">Design and build your application</p>
         </div>
       </div>
 
@@ -54,7 +56,7 @@ const UserProfile: React.FC<UserProfileProps> = ({
               value={searchQuery}
               onChange={handleSearchChange}
               placeholder={searchPlaceholder}
-              className="w-full pl-12 pr-20 py-3 bg-white/80 backdrop-blur-sm border border-gray-200/50 rounded-2xl shadow-lg hover:shadow-xl focus:shadow-2xl focus:border-blue-300 focus:ring-4 focus:ring-blue-100 transition-all duration-300 text-gray-700 placeholder-gray-400 font-medium"
+              className="w-full pl-12 pr-20 py-3 bg-white/80 dark:bg-gray-700/80 backdrop-blur-sm border border-gray-200/50 dark:border-gray-600/50 rounded-2xl shadow-lg hover:shadow-xl focus:shadow-2xl focus:border-blue-300 focus:ring-4 focus:ring-blue-100 dark:focus:ring-blue-900/30 transition-all duration-300 text-gray-700 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 font-medium"
             />
             <div className="absolute right-2 flex items-center space-x-1">
               {searchQuery && (
@@ -90,10 +92,10 @@ const UserProfile: React.FC<UserProfileProps> = ({
               ></div>
               
               {/* Filters Modal */}
-              <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-xl shadow-2xl border border-gray-200 z-[9999] p-4">
+              <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 z-[9999] p-4">
                 <div className="space-y-4">
                   <div>
-                    <h4 className="text-sm font-semibold text-gray-900 mb-2">Search in:</h4>
+                    <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">Search in:</h4>
                     <div className="flex flex-wrap gap-2">
                       <button className="px-3 py-1 bg-blue-100 text-blue-700 rounded-lg text-sm font-medium hover:bg-blue-200 transition-colors">
                         Projects
@@ -110,7 +112,7 @@ const UserProfile: React.FC<UserProfileProps> = ({
                     </div>
                   </div>
                   <div>
-                    <h4 className="text-sm font-semibold text-gray-900 mb-2">Filter by status:</h4>
+                    <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">Filter by status:</h4>
                     <div className="flex flex-wrap gap-2">
                       <button className="px-3 py-1 bg-green-100 text-green-700 rounded-lg text-sm font-medium hover:bg-green-200 transition-colors">
                         Active
@@ -137,6 +139,15 @@ const UserProfile: React.FC<UserProfileProps> = ({
 
         {/* Avatar and Actions */}
         <div className="flex items-center space-x-3">
+          {/* Theme Toggle */}
+          <button
+            onClick={toggleTheme}
+            className="p-2.5 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 shadow-sm transition-all duration-200"
+            title={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
+          >
+            {theme === 'light' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
+          </button>
+
           {/* Notifications */}
           <div className="hidden">
           <button
@@ -214,28 +225,28 @@ const UserProfile: React.FC<UserProfileProps> = ({
 
         {/* User Avatar Dropdown */}
         <div className="relative group">
-          <button className="flex items-center space-x-3 p-2 rounded-xl hover:bg-white/50 transition-all duration-200 transform hover:scale-105 border border-gray-200 bg-white shadow-lg">
+          <button className="flex items-center space-x-3 p-2 rounded-xl hover:bg-white/50 dark:hover:bg-gray-700/50 transition-all duration-200 transform hover:scale-105 border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 shadow-lg">
             <img
               src={user.avatar}
               alt={user.name}
-              className="w-10 h-10 rounded-full ring-2 ring-indigo-100"
+              className="w-10 h-10 rounded-full ring-2 ring-indigo-100 dark:ring-indigo-900"
             />
             <div className="hidden sm:block text-left">
-              <p className="text-sm font-semibold text-gray-900">{user.name}</p>
-              <p className="text-xs text-gray-500">Account Settings</p>
+              <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">{user.name}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Account Settings</p>
             </div>
           </button>
-          
+
           {/* Dropdown Menu */}
-          <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-2xl border border-gray-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-[9999] backdrop-blur-sm">
+          <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-[9999] backdrop-blur-sm">
             <div className="p-2">
-              <button className="w-full flex items-center space-x-2 px-3 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition-colors">
+              <button className="w-full flex items-center space-x-2 px-3 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors">
                 <Settings className="w-4 h-4" />
                 <span>Settings</span>
               </button>
               <button
                 onClick={onLogout}
-                className="w-full flex items-center space-x-2 px-3 py-2 text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                className="w-full flex items-center space-x-2 px-3 py-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md transition-colors"
               >
                 <LogOut className="w-4 h-4" />
                 <span>Logout</span>

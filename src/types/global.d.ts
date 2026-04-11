@@ -1,3 +1,14 @@
+/// <reference types="vite/client" />
+
+// Vite environment variables
+interface ImportMetaEnv {
+  readonly VITE_GOOGLE_CLIENT_ID: string;
+}
+
+interface ImportMeta {
+  readonly env: ImportMetaEnv;
+}
+
 // Global type declarations
 
 // Declare module for .js files that haven't been converted to TypeScript yet

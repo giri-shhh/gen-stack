@@ -1,0 +1,14 @@
+# Google OAuth 2.0 Client ID
+# Steps to get one:
+# 1. Go to https://console.cloud.google.com/
+# 2. Create a project (or select an existing one)
+# 3. Navigate to APIs & Services > Credentials
+# 4. Click "Create Credentials" > "OAuth 2.0 Client ID"
+# 5. Choose Application type: "Web application"
+# 6. Add your dev origin to "Authorized JavaScript origins":
+#      http://localhost:5173
+# 7. For production (GitHub Pages) also add:
+#      https://<your-username>.github.io
+# 8. Copy the Client ID below
+
+VITE_GOOGLE_CLIENT_ID=your-client-id-here.apps.googleusercontent.com

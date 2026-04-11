@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Maximize2, X, Globe, Settings, BarChart3, FolderOpen, Palette } from 'lucide-react';
+import { Maximize2, X, Globe, Settings, BarChart3, FolderOpen, Palette, ExternalLink } from 'lucide-react';
 import { getTechById, getCategoryByTechId } from '../data/techStack';
 import {
   TechnologyInfo,
@@ -25,6 +25,7 @@ interface PropertiesPanelProps {
   previewComponent: CanvasComponent | null;
   isPopupMode?: boolean;
   setIsPopupMode?: (isPopup: boolean) => void;
+  onOpenModuleConfig?: () => void;
 }
 
 const PropertiesPanelModular = ({
@@ -38,7 +39,8 @@ const PropertiesPanelModular = ({
   setShowProjectPreview,
   previewComponent,
   isPopupMode: externalIsPopupMode,
-  setIsPopupMode: externalSetIsPopupMode
+  setIsPopupMode: externalSetIsPopupMode,
+  onOpenModuleConfig,
 }: PropertiesPanelProps) => {
   const [activeTab, setActiveTab] = useState('properties');
   const [internalIsPopupMode, setInternalIsPopupMode] = useState(false);
@@ -307,15 +309,27 @@ const PropertiesPanelModular = ({
             <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
             <span>Properties</span>
           </h2>
-          {!isPopupMode && (
-            <button
-              onClick={() => setIsPopupMode(true)}
-              className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-100 rounded-lg transition-all duration-200 transform hover:scale-105"
-              title="Expand to popup view"
-            >
-              <Maximize2 className="w-4 h-4" />
-            </button>
-          )}
+          <div className="flex items-center space-x-1">
+            {currentComponent && onOpenModuleConfig && (
+              <button
+                onClick={onOpenModuleConfig}
+                className="flex items-center space-x-1 px-2 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg transition-all duration-200 hover:scale-105"
+                title="Open full module configuration screen"
+              >
+                <ExternalLink className="w-3 h-3" />
+                <span>Configure</span>
+              </button>
+            )}
+            {!isPopupMode && (
+              <button
+                onClick={() => setIsPopupMode(true)}
+                className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-100 rounded-lg transition-all duration-200 transform hover:scale-105"
+                title="Expand to popup view"
+              >
+                <Maximize2 className="w-4 h-4" />
+              </button>
+            )}
+          </div>
         </div>
         
         {/* Compact Tab Navigation */}
