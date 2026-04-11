@@ -57,7 +57,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onCreateNewProject, onLogou
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50/30 to-indigo-50/20">
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+      <main className="w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
         {/* User Profile Section */}
         <div className="relative backdrop-blur-sm bg-white/70 rounded-2xl shadow-lg border border-white/20 p-6 z-10">
           <UserProfile 

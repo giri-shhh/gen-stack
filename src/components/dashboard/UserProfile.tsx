@@ -138,7 +138,7 @@ const UserProfile: React.FC<UserProfileProps> = ({
         {/* Avatar and Actions */}
         <div className="flex items-center space-x-3">
           {/* Notifications */}
-          <div className="relative">
+          <div className="hidden">
           <button
             onClick={() => setShowNotifications(!showNotifications)}
             className="relative p-3 text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl bg-white border border-gray-200"
