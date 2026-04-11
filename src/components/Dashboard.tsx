@@ -48,7 +48,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onCreateNewProject, onLogou
   } = useDashboard();
 
   const handleOpenProject = (project: Project) => {
-      onCreateNewProject(project);
+    onCreateNewProject(project);
   };
 
   const handleCloseModal = () => {

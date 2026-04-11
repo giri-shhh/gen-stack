@@ -1,8 +1,62 @@
 import { useState, useEffect, useMemo } from 'react';
 import type { Project } from '../types';
 
+// Sample projects data
+const getSampleProjects = (): Project[] => [
+  {
+    id: 1,
+    name: 'E-commerce Platform',
+    description: 'A comprehensive e-commerce solution with user authentication, product management, shopping cart, payment integration, and order tracking.',
+    lastModified: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+    technologies: ['React', 'Node.js', 'MongoDB', 'Stripe', 'Redis'],
+    status: 'active',
+    createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+    author: 'John Doe',
+    version: '2.1.0',
+    deploymentUrl: 'https://mystore.example.com',
+    repository: 'https://github.com/johndoe/ecommerce-platform',
+    components: 25,
+    connections: 12,
+    isPublic: true,
+    isFavorite: true,
+    tags: ['ecommerce', 'fullstack', 'production']
+  },
+  {
+    id: 2,
+    name: 'Task Management App',
+    description: 'A collaborative task management application with real-time updates, team collaboration, file attachments, and progress tracking.',
+    lastModified: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+    technologies: ['Vue.js', 'Express', 'PostgreSQL', 'Socket.io'],
+    status: 'completed',
+    createdAt: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString(),
+    author: 'Jane Smith',
+    version: '1.5.2',
+    deploymentUrl: 'https://taskmanager.example.com',
+    repository: 'https://github.com/janesmith/task-manager',
+    components: 18,
+    connections: 8,
+    isPublic: false,
+    isFavorite: false,
+    tags: ['productivity', 'collaboration', 'realtime']
+  }
+];
+
 export const useDashboard = () => {
-  const [recentProjects, setRecentProjects] = useState<Project[]>([]);
+  const [recentProjects, setRecentProjects] = useState<Project[]>(() => {
+    const saved = localStorage.getItem('userProjects');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed && parsed.length > 0) {
+          return parsed;
+        }
+      } catch (e) {
+        console.error('Failed to parse projects', e);
+      }
+    }
+    return getSampleProjects();
+  });
+
   const [currentFilter, setCurrentFilter] = useState('all');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [searchQuery, setSearchQuery] = useState('');
@@ -17,59 +71,9 @@ export const useDashboard = () => {
   const [showTemplatesModal, setShowTemplatesModal] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<Project | null>(null);
 
-  // Sample projects data
-  const getSampleProjects = (): Project[] => [
-    {
-      id: 1,
-      name: 'E-commerce Platform',
-      description: 'A comprehensive e-commerce solution with user authentication, product management, shopping cart, payment integration, and order tracking.',
-      lastModified: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-      technologies: ['React', 'Node.js', 'MongoDB', 'Stripe', 'Redis'],
-      status: 'active',
-      createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString(),
-      author: 'John Doe',
-      version: '2.1.0',
-      deploymentUrl: 'https://mystore.example.com',
-      repository: 'https://github.com/johndoe/ecommerce-platform',
-      components: 25,
-      connections: 12,
-      isPublic: true,
-      isFavorite: true,
-      tags: ['ecommerce', 'fullstack', 'production']
-    },
-    {
-      id: 2,
-      name: 'Task Management App',
-      description: 'A collaborative task management application with real-time updates, team collaboration, file attachments, and progress tracking.',
-      lastModified: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-      technologies: ['Vue.js', 'Express', 'PostgreSQL', 'Socket.io'],
-      status: 'completed',
-      createdAt: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString(),
-      author: 'Jane Smith',
-      version: '1.5.2',
-      deploymentUrl: 'https://taskmanager.example.com',
-      repository: 'https://github.com/janesmith/task-manager',
-      components: 18,
-      connections: 8,
-      isPublic: false,
-      isFavorite: false,
-      tags: ['productivity', 'collaboration', 'realtime']
-    }
-  ];
-
-  // Load projects on component mount
-  useEffect(() => {
-    // Always use the new sample projects (2 projects instead of 6)
-    const sampleProjects = getSampleProjects();
-    setRecentProjects(sampleProjects);
-    localStorage.setItem('recentProjects', JSON.stringify(sampleProjects));
-  }, []);
-
   // Save projects to localStorage whenever they change
   useEffect(() => {
-    if (recentProjects.length > 0) {
-      localStorage.setItem('recentProjects', JSON.stringify(recentProjects));
-    }
+    localStorage.setItem('userProjects', JSON.stringify(recentProjects));
   }, [recentProjects]);
 
   // Filter and sort projects

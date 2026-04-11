@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { DndContext, DragOverlay, closestCenter } from '@dnd-kit/core';
 import { Settings } from 'lucide-react';
+import { Routes, Route, useNavigate, Navigate, useParams } from 'react-router-dom';
 
 import LandingPage from './components/LandingPage';
 import Dashboard from './components/Dashboard';
@@ -31,11 +32,42 @@ import type {
 //   avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=32&h=32&fit=crop&crop=face'
 // };
 
+
+const ProjectLoader = ({ currentProject, setCurrentProject }: { currentProject: any, setCurrentProject: any }) => {
+  const { projectId } = useParams();
+  
+  useEffect(() => {
+    if (projectId && (!currentProject || currentProject.id.toString() !== projectId)) {
+      const savedProjects = localStorage.getItem('userProjects');
+      if (savedProjects) {
+        const projects = JSON.parse(savedProjects);
+        const found = projects.find((p: any) => p.id.toString() === projectId);
+        if (found) {
+          setCurrentProject(found);
+        }
+      }
+    }
+  }, [projectId, currentProject, setCurrentProject]);
+  
+  return null;
+};
+
 function App() {
+  const navigate = useNavigate();
   // State management
-  const [user, setUser] = useState<User | null>(null);
-  const [showDashboard, setShowDashboard] = useState(false);
-  const [showLanding, setShowLanding] = useState(true);
+  const [user, setUser] = useState<User | null>(() => {
+    const saved = localStorage.getItem('user');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error('Failed to parse user from localStorage', e);
+      }
+    }
+    return null;
+  });
+  
+  
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<'signin' | 'signup'>('signin');
   const [getStartedModalOpen, setGetStartedModalOpen] = useState(false);
@@ -215,8 +247,8 @@ function App() {
       // If no user is logged in, show the get started modal with options
       setGetStartedModalOpen(true);
     } else {
-      setShowLanding(false);
-      setShowDashboard(true);
+      
+      navigate('/dashboard');
     }
   };
 
@@ -239,8 +271,8 @@ function App() {
     
     setUser(tempUser);
     setGetStartedModalOpen(false);
-    setShowLanding(false);
-    setShowDashboard(true);
+    
+    navigate('/dashboard');
   };
 
   const handleGetStartedSignUp = () => {
@@ -251,7 +283,8 @@ function App() {
 
   const handleBackToLanding = () => {
     setCurrentProject(null);
-    setShowDashboard(true);
+    navigate('/');
+    navigate('/dashboard');
     setDashboardKey(prev => prev + 1); // Force Dashboard re-render
   };
 
@@ -334,6 +367,7 @@ function App() {
   const handleCreateNewProject = (project: Project | null = null) => {
     if (project) {
       setCurrentProject(project);
+      navigate(`/project/${project.id}`);
     } else {
       const newProject: Project = {
         id: Date.now(),
@@ -344,15 +378,16 @@ function App() {
         status: 'active'
       };
       setCurrentProject(newProject);
+      navigate(`/project/${newProject.id}`);
     }
-    setShowDashboard(false);
   };
 
   const handleLogout = () => {
     setUser(null);
     setCurrentProject(null);
-    setShowDashboard(false);
-    setShowLanding(true);
+    navigate('/');
+    
+    
   };
 
   const handleOpenSignIn = () => {
@@ -368,8 +403,8 @@ function App() {
   const handleAuthSuccess = (userObj: User) => {
     setUser(userObj);
     setAuthModalOpen(false);
-    setShowLanding(false);
-    setShowDashboard(true);
+    
+    navigate('/dashboard');
   };
 
   const handleComponentDoubleClick = (component: CanvasComponent) => {
@@ -407,8 +442,9 @@ function App() {
       
       // Navigate back to dashboard
       setCurrentProject(null);
-      setShowDashboard(true);
-      setShowLanding(false);
+    navigate('/');
+      navigate('/dashboard');
+      
       
       // Show success toast
       setToast({
@@ -533,172 +569,190 @@ function App() {
     setSelectedComponent(null);
   };
 
-  // Render landing page
-  if (showLanding) {
-    return (
-      <>
-        <LandingPage 
-          onGetStarted={handleGetStarted}
-          onSignIn={handleOpenSignIn}
-          onSignUp={handleOpenSignUp}
-        />
-        <GetStartedModal
-          isOpen={getStartedModalOpen}
-          onClose={() => setGetStartedModalOpen(false)}
-          onSignUp={handleGetStartedSignUp}
-          onContinueAsTemp={handleContinueAsTemp}
-        />
-        {authModalOpen && (
-          <AuthModal
-            isOpen={authModalOpen}
-            mode={authModalMode}
-            onClose={() => setAuthModalOpen(false)}
-            onAuthSuccess={handleAuthSuccess}
-          />
-        )}
-      </>
-    );
-  }
-
-  // Render dashboard
-  if (showDashboard && user) {
-    return (
-      <Dashboard
-        key={`dashboard-${dashboardKey}`} // Force re-render when dashboard becomes visible
-        user={user}
-        onCreateNewProject={handleCreateNewProject}
-        onLogout={handleLogout}
-      />
-    );
-  }
-
-  // Render main canvas
-  return (
-    <DndContext 
-      onDragStart={handleDragStart} 
-      onDragEnd={handleDragEnd}
-      onDragCancel={handleDragCancel}
-      collisionDetection={closestCenter}
-    >
-      <div className="h-screen flex flex-col bg-gray-50">
-        <Header 
-          onBackToLanding={handleBackToLanding} 
-          user={user || undefined} 
-          onLogout={handleLogout}
-          currentProject={currentProject || undefined}
-          onSaveProject={handleSaveProject}
-          onDeleteProject={handleDeleteCurrentProject}
-          components={components}
-          connections={connections}
-        />
-        
-        <div className="flex flex-1 overflow-hidden flex-layout">
-          {/* Left Sidebar - Resizable */}
-          <ResizablePanel
-            side="left"
-            defaultWidth={sidebarWidth}
-            minWidth={250}
-            maxWidth={500}
-            onResize={handleSidebarResize}
-          >
-            <div className="h-full bg-white border-r border-gray-200 overflow-y-auto">
-              <Sidebar 
-                currentProject={currentProject || undefined}
-                onProjectUpdate={(updates) => {
-                  if (currentProject) {
-                    const updatedProject = { ...currentProject, ...updates };
-                    setCurrentProject(updatedProject);
-                    // Update localStorage or backend here if needed
-                  }
-                }}
-              />
-            </div>
-          </ResizablePanel>
-          
-          {/* Main Canvas - Ensure it doesn't overflow when properties panel is visible */}
-          <div className={`relative flex-1 min-w-0 canvas-container ${selectedComponent ? 'canvas-with-panel' : ''}`}>
-            <Canvas
-              components={components}
-              connections={connections}
-              selectedComponent={selectedComponent || undefined}
-              onComponentSelect={setSelectedComponent}
-              onComponentUpdate={updateComponent}
-              onComponentRemove={removeComponent}
-              onConnectionAdd={(connection: Connection) => addConnection(connection.source, connection.target)}
-              onConnectionRemove={removeConnection}
-              onCanvasClick={clearSelection}
-              onAddComponent={addComponent}
-              draggedTech={draggedTech || undefined}
-              onComponentDoubleClick={handleComponentDoubleClick}
-              onViewProjectStructure={handleViewProjectStructure}
-            />
-            
-
-            
-            {/* Floating Properties Panel Button */}
-            {selectedComponent && (
-              <div className="absolute bottom-4 right-4 z-50">
-                <button
-                  onClick={() => {
-                    // Ensure properties panel is visible by scrolling to it
-                    const propertiesPanel = document.querySelector('[data-properties-panel]');
-                    if (propertiesPanel) {
-                      propertiesPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                    }
-                  }}
-                  className="bg-green-600 hover:bg-green-700 text-white p-3 rounded-full shadow-lg transition-all duration-200 hover:scale-110"
-                  title="Open Properties Panel (Press 'P' key)"
-                >
-                  <Settings className="w-5 h-5" />
-                </button>
-              </div>
-            )}
-          </div>
-          
-          {/* Right Panel - Resizable, only show when component is selected */}
-          {selectedComponent && (
-            <ResizablePanel
-              side="right"
-              defaultWidth={propertiesPanelWidth}
-              minWidth={280}
-              maxWidth={600}
-              onResize={handlePropertiesPanelResize}
+  // Setup project editor content
+  const projectEditorContent = !currentProject ? (
+    <div className="flex items-center justify-center h-screen">
+      <ProjectLoader currentProject={currentProject} setCurrentProject={setCurrentProject} />
+      Loading project...
+    </div>
+  ) : (
+    <>
+      <ProjectLoader currentProject={currentProject} setCurrentProject={setCurrentProject} />
+      <DndContext 
+              onDragStart={handleDragStart} 
+              onDragEnd={handleDragEnd}
+              onDragCancel={handleDragCancel}
+              collisionDetection={closestCenter}
             >
-              <div className="h-full bg-white border-l border-gray-200 overflow-y-auto properties-panel-visible" data-properties-panel>
-                <PropertiesPanel
-                  selectedComponent={selectedComponent}
-                  onComponentUpdate={updateComponent}
-                  onComponentRemove={removeComponent}
-                  onConnectionRemove={removeConnection}
+              <div className="h-screen flex flex-col bg-gray-50">
+                <Header 
+                  onBackToLanding={handleBackToLanding} 
+                  user={user || undefined} 
+                  onLogout={handleLogout}
+                  currentProject={currentProject || undefined}
+                  onSaveProject={handleSaveProject}
+                  onDeleteProject={handleDeleteCurrentProject}
                   components={components}
                   connections={connections}
-                  addComponent={addComponent}
-                  showProjectPreview={showProjectPreview}
-                  setShowProjectPreview={setShowProjectPreview}
-                  previewComponent={previewComponent}
-                  isPopupMode={isPropertiesPanelPopup}
-                  setIsPopupMode={handlePropertiesPanelPopupToggle}
                 />
+                
+                <div className="flex flex-1 overflow-hidden flex-layout">
+                  {/* Left Sidebar - Resizable */}
+                  <ResizablePanel
+                    side="left"
+                    defaultWidth={sidebarWidth}
+                    minWidth={250}
+                    maxWidth={500}
+                    onResize={handleSidebarResize}
+                  >
+                    <div className="h-full bg-white border-r border-gray-200 overflow-y-auto">
+                      <Sidebar 
+                        currentProject={currentProject || undefined}
+                        onProjectUpdate={(updates) => {
+                          if (currentProject) {
+                            const updatedProject = { ...currentProject, ...updates };
+                            setCurrentProject(updatedProject);
+                            // Update localStorage or backend here if needed
+                          }
+                        }}
+                      />
+                    </div>
+                  </ResizablePanel>
+                  
+                  {/* Main Canvas - Ensure it doesn't overflow when properties panel is visible */}
+                  <div className={`relative flex-1 min-w-0 canvas-container ${selectedComponent ? 'canvas-with-panel' : ''}`}>
+                    <Canvas
+                      components={components}
+                      connections={connections}
+                      selectedComponent={selectedComponent || undefined}
+                      onComponentSelect={setSelectedComponent}
+                      onComponentUpdate={updateComponent}
+                      onComponentRemove={removeComponent}
+                      onConnectionAdd={(connection: Connection) => addConnection(connection.source, connection.target)}
+                      onConnectionRemove={removeConnection}
+                      onCanvasClick={clearSelection}
+                      onAddComponent={addComponent}
+                      draggedTech={draggedTech || undefined}
+                      onComponentDoubleClick={handleComponentDoubleClick}
+                      onViewProjectStructure={handleViewProjectStructure}
+                    />
+                    
+                    {/* Floating Properties Panel Button */}
+                    {selectedComponent && (
+                      <div className="absolute bottom-4 right-4 z-50">
+                        <button
+                          onClick={() => {
+                            // Ensure properties panel is visible by scrolling to it
+                            const propertiesPanel = document.querySelector('[data-properties-panel]');
+                            if (propertiesPanel) {
+                              propertiesPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                            }
+                          }}
+                          className="bg-green-600 hover:bg-green-700 text-white p-3 rounded-full shadow-lg transition-all duration-200 hover:scale-110"
+                          title="Open Properties Panel (Press 'P' key)"
+                        >
+                          <Settings className="w-5 h-5" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Right Panel - Resizable, only show when component is selected */}
+                  {selectedComponent && (
+                    <ResizablePanel
+                      side="right"
+                      defaultWidth={propertiesPanelWidth}
+                      minWidth={280}
+                      maxWidth={600}
+                      onResize={handlePropertiesPanelResize}
+                    >
+                      <div className="h-full bg-white border-l border-gray-200 overflow-y-auto properties-panel-visible" data-properties-panel>
+                        <PropertiesPanel
+                          selectedComponent={selectedComponent}
+                          onComponentUpdate={updateComponent}
+                          onComponentRemove={removeComponent}
+                          onConnectionRemove={removeConnection}
+                          components={components}
+                          connections={connections}
+                          addComponent={addComponent}
+                          showProjectPreview={showProjectPreview}
+                          setShowProjectPreview={setShowProjectPreview}
+                          previewComponent={previewComponent}
+                          isPopupMode={isPropertiesPanelPopup}
+                          setIsPopupMode={handlePropertiesPanelPopupToggle}
+                        />
+                      </div>
+                    </ResizablePanel>
+                  )}
+                </div>
+                
+                <DragOverlay dropAnimation={null}>
+                  {dragOverlayContent}
+                </DragOverlay>
               </div>
-            </ResizablePanel>
+              
+              {/* Toast Notification */}
+              {toast && (
+                <Toast
+                  message={toast.message}
+                  type={toast.type}
+                  onClose={() => setToast(null)}
+                />
+              )}
+            </DndContext>
+    </>
+  );
+
+  return (
+    <Routes>
+      <Route path="/" element={
+        <>
+          <LandingPage 
+            onGetStarted={handleGetStarted}
+            onSignIn={handleOpenSignIn}
+            onSignUp={handleOpenSignUp}
+          />
+          <GetStartedModal
+            isOpen={getStartedModalOpen}
+            onClose={() => setGetStartedModalOpen(false)}
+            onSignUp={handleGetStartedSignUp}
+            onContinueAsTemp={handleContinueAsTemp}
+          />
+          {authModalOpen && (
+            <AuthModal
+              isOpen={authModalOpen}
+              mode={authModalMode}
+              onClose={() => setAuthModalOpen(false)}
+              onAuthSuccess={handleAuthSuccess}
+            />
           )}
-        </div>
-        
-        <DragOverlay dropAnimation={null}>
-          {dragOverlayContent}
-        </DragOverlay>
-      </div>
+        </>
+      } />
       
-      {/* Toast Notification */}
-      {toast && (
-        <Toast
-          message={toast.message}
-          type={toast.type}
-          onClose={() => setToast(null)}
-        />
-      )}
-    </DndContext>
+      <Route path="/dashboard" element={
+        user ? (
+          <Dashboard
+            key={`dashboard-${dashboardKey}`} // Force re-render when dashboard becomes visible
+            user={user}
+            onCreateNewProject={handleCreateNewProject}
+            onLogout={handleLogout}
+          />
+        ) : (
+          <Navigate to="/" />
+        )
+      } />
+
+      <Route path="/project/:projectId" element={
+        user ? (
+          projectEditorContent
+        ) : (
+          <Navigate to="/" />
+        )
+      } />
+      
+      <Route path="*" element={<Navigate to="/" />} />
+    </Routes>
   );
 }
 
-export default App; 
+export default App;

@@ -38,9 +38,9 @@ const ProjectCard: React.FC<ProjectCardProps> = ({
   onOpenDeployment
 }) => {
   const handleCardClick = (e: React.MouseEvent) => {
-    // Prevent navigation if clicking on action buttons
+    // Prevent navigation if clicking on action buttons or their icons
     const target = e.target as HTMLElement;
-    if (target.closest('button')) {
+    if (target.closest('button') || target.tagName === 'path' || target.tagName === 'svg') {
       return;
     }
     onOpenProject(project);
