@@ -10,7 +10,6 @@ import ResizablePanel from './ResizablePanel';
 import Header from './Header';
 import Toast from './Toast';
 import ExportModal from './ExportModal';
-import ModuleConfigScreen from './ModuleConfigScreen';
 import { useCanvasState } from '../hooks/useCanvasState';
 import { getTechById } from '../data/techStack';
 import type { 
@@ -92,9 +91,6 @@ export default function EditorPage({ user, currentProject, setCurrentProject, on
   // Properties panel state
   const [showProjectPreview, setShowProjectPreview] = useState(false);
   const [previewComponent, setPreviewComponent] = useState<CanvasComponent | null>(null);
-  const [isPropertiesPanelPopup, setIsPropertiesPanelPopup] = useState(false);
-  const [showModuleConfig, setShowModuleConfig] = useState(false);
-
   // Panel width state
   const [sidebarWidth, setSidebarWidth] = useState(() => {
     const saved = localStorage.getItem('sidebarWidth');
@@ -256,12 +252,33 @@ export default function EditorPage({ user, currentProject, setCurrentProject, on
   };
 
   const handleComponentDoubleClick = (component: CanvasComponent) => {
-    setSelectedComponent(component);
-    setIsPropertiesPanelPopup(true);
-    setToast({
-      message: `Properties panel opened in full view for ${component.properties?.name || component.techId}`,
-      type: 'success'
-    });
+    if (!currentProject) return;
+
+    // Auto-save current canvas state to localStorage and App state before navigating
+    const canvasState = {
+      components: components.map((c: CanvasComponent) => ({ ...c })),
+      connections: connections.map((c: any) => ({ ...c })),
+      zoom: 1,
+      pan: { x: 0, y: 0 }
+    };
+    const updatedProject: Project = {
+      ...currentProject,
+      canvasState,
+      lastModified: new Date().toISOString()
+    };
+
+    const savedProjects = localStorage.getItem('userProjects');
+    let projects: Project[] = [];
+    if (savedProjects) {
+      try { projects = JSON.parse(savedProjects); } catch { projects = []; }
+    }
+    const idx = projects.findIndex(p => p.id === updatedProject.id);
+    if (idx >= 0) projects[idx] = updatedProject;
+    else projects.unshift(updatedProject);
+    localStorage.setItem('userProjects', JSON.stringify(projects));
+
+    setCurrentProject(updatedProject);
+    navigate(`/project/${currentProject.id}/module/${component.id}`);
   };
 
   const handleViewProjectStructure = (component: CanvasComponent) => {
@@ -269,9 +286,6 @@ export default function EditorPage({ user, currentProject, setCurrentProject, on
     setShowProjectPreview(true);
   };
 
-  const handlePropertiesPanelPopupToggle = (isPopup: boolean) => {
-    setIsPropertiesPanelPopup(isPopup);
-  };
 
   const handleDeleteCurrentProject = () => {
     if (currentProject) {
@@ -558,9 +572,6 @@ export default function EditorPage({ user, currentProject, setCurrentProject, on
                     showProjectPreview={showProjectPreview}
                     setShowProjectPreview={setShowProjectPreview}
                     previewComponent={previewComponent}
-                    isPopupMode={isPropertiesPanelPopup}
-                    setIsPopupMode={handlePropertiesPanelPopupToggle}
-                    onOpenModuleConfig={() => setShowModuleConfig(true)}
                   />
                 </div>
               </ResizablePanel>
@@ -580,15 +591,7 @@ export default function EditorPage({ user, currentProject, setCurrentProject, on
           />
         )}
         
-        {showModuleConfig && selectedComponent && (
-          <ModuleConfigScreen
-            component={selectedComponent}
-            components={components}
-            connections={connections}
-            onComponentUpdate={updateComponent}
-            onClose={() => setShowModuleConfig(false)}
-          />
-        )}
+
       </DndContext>
     </>
   );

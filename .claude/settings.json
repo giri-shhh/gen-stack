@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(npm install:*)",
-      "Bash(ls -la /c/Root/github/gen-stack/src/components/*.tsx)"
+      "Bash(ls -la /c/Root/github/gen-stack/src/components/*.tsx)",
+      "Bash(npm run:*)"
     ]
   }
 }

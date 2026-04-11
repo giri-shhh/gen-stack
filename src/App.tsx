@@ -6,6 +6,7 @@ import Dashboard from './components/Dashboard';
 import AuthModal from './components/AuthModal';
 import GetStartedModal from './components/GetStartedModal';
 import EditorPage from './components/EditorPage';
+import ModuleDetailPage from './components/ModuleDetailPage';
 import type { User, Project } from './types';
 
 function App() {
@@ -149,9 +150,9 @@ function App() {
 
       <Route path="/project/:projectId" element={
         user ? (
-          <EditorPage 
-            user={user} 
-            currentProject={currentProject} 
+          <EditorPage
+            user={user}
+            currentProject={currentProject}
             setCurrentProject={setCurrentProject}
             onLogout={handleLogout}
           />
@@ -159,7 +160,20 @@ function App() {
           <Navigate to="/" />
         )
       } />
-      
+
+      <Route path="/project/:projectId/module/:componentId" element={
+        user ? (
+          <ModuleDetailPage
+            user={user}
+            currentProject={currentProject}
+            setCurrentProject={setCurrentProject}
+            onLogout={handleLogout}
+          />
+        ) : (
+          <Navigate to="/" />
+        )
+      } />
+
       <Route path="*" element={<Navigate to="/" />} />
     </Routes>
   );
