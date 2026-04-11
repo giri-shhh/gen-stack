@@ -19,8 +19,11 @@ export default function LandingPageRoute() {
     return (
         <>
             <LandingPage
-                onGetStarted={handleGetStarted}
-            />
+                onGetStarted={handleGetStarted} onSignIn={function (): void {
+                    throw new Error('Function not implemented.');
+                } } onSignUp={function (): void {
+                    throw new Error('Function not implemented.');
+                } }            />
             <GetStartedModal
                 isOpen={getStartedModalOpen}
                 onClose={() => setGetStartedModalOpen(false)}
