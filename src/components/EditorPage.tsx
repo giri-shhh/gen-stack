@@ -9,6 +9,8 @@ import PropertiesPanel from './PropertiesPanelModular';
 import ResizablePanel from './ResizablePanel';
 import Header from './Header';
 import Toast from './Toast';
+import EditorMenuBar from './EditorMenuBar';
+import ExportModal from './ExportModal';
 import { useCanvasState } from '../hooks/useCanvasState';
 import { getTechById } from '../data/techStack';
 import type { 
@@ -49,6 +51,7 @@ interface EditorPageProps {
 export default function EditorPage({ user, currentProject, setCurrentProject, onLogout }: EditorPageProps) {
   const navigate = useNavigate();
   const [toast, setToast] = useState<ToastType | null>(null);
+  const [showExportModal, setShowExportModal] = useState(false);
 
   // Canvas state
   const {
@@ -263,6 +266,45 @@ export default function EditorPage({ user, currentProject, setCurrentProject, on
     }
   };
 
+  const handleCloneProject = () => {
+    if (!currentProject) return;
+
+    try {
+      const canvasState = {
+        components: components.map((comp: CanvasComponent) => ({ ...comp })),
+        connections: connections.map((conn: any) => ({ ...conn })),
+        zoom: 1,
+        pan: { x: 0, y: 0 }
+      };
+
+      const newProject: Project = {
+        id: Date.now(),
+        name: `${currentProject.name} (Copy)`,
+        description: currentProject.description,
+        createdAt: new Date().toISOString(),
+        lastModified: new Date().toISOString(),
+        canvasState,
+        technologies: currentProject.technologies,
+        status: 'draft'
+      };
+
+      const savedProjects = localStorage.getItem('userProjects');
+      let projects: Project[] = [];
+      if (savedProjects) {
+        try { projects = JSON.parse(savedProjects); } catch (e) { projects = []; }
+      }
+
+      projects.unshift(newProject);
+      localStorage.setItem('userProjects', JSON.stringify(projects));
+
+      setCurrentProject(newProject);
+      navigate(`/editor/${newProject.id}`);
+      setToast({ message: `Project cloned successfully! Created "${newProject.name}"`, type: 'success' });
+    } catch (error) {
+      setToast({ message: 'Error cloning project', type: 'error' });
+    }
+  };
+
   const handleSidebarResize = (width: number) => {
     setSidebarWidth(width);
     localStorage.setItem('sidebarWidth', width.toString());
@@ -380,6 +422,19 @@ export default function EditorPage({ user, currentProject, setCurrentProject, on
             connections={connections}
           />
           
+          {currentProject && (
+            <EditorMenuBar
+              project={currentProject}
+              components={components}
+              connections={connections}
+              onSave={handleSaveProject}
+              onClone={handleCloneProject}
+              onExport={() => setShowExportModal(true)}
+              onDelete={handleDeleteCurrentProject}
+              isSaving={false}
+            />
+          )}
+          
           <div className="flex flex-1 overflow-hidden flex-layout">
             <ResizablePanel
               side="left"
@@ -475,6 +530,14 @@ export default function EditorPage({ user, currentProject, setCurrentProject, on
             onClose={() => setToast(null)}
           />
         )}
+        
+        <ExportModal 
+          isOpen={showExportModal}
+          onClose={() => setShowExportModal(false)}
+          components={components}
+          connections={connections}
+          currentProject={currentProject || undefined}
+        />
       </DndContext>
     </>
   );
