@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Download, GitBranch, Globe, FileText, Code, Folder, Settings, BarChart3, Layers, Eye } from 'lucide-react';
+import { X, Download, GitBranch, Globe, FileText, Code, Folder, Settings, BarChart3, Layers, Eye, AlertCircle, CheckCircle } from 'lucide-react';
 import { saveAs } from 'file-saver';
 import JSZip from 'jszip';
 import { getTechById, getCategoryByTechId } from '../data/techStack';
@@ -11,9 +11,10 @@ interface ExportModalProps {
   components: CanvasComponent[];
   connections: Connection[];
   currentProject?: Project;
+  initialOption?: ExportOption;
 }
 
-type ExportOption = 'zip' | 'git';
+export type ExportOption = 'zip' | 'git';
 type OverviewTab = 'summary' | 'components' | 'structure' | 'files';
 
 const ExportModal: React.FC<ExportModalProps> = ({ 
@@ -21,19 +22,30 @@ const ExportModal: React.FC<ExportModalProps> = ({
   onClose, 
   components, 
   connections, 
-  currentProject 
+  currentProject,
+  initialOption = 'zip'
 }) => {
-  const [selectedOption, setSelectedOption] = useState<ExportOption>('zip');
+  const [selectedOption, setSelectedOption] = useState<ExportOption>(initialOption);
   const [generating, setGenerating] = useState(false);
   const [projectName, setProjectName] = useState(currentProject?.name || 'my-fullstack-app');
   const [activeOverviewTab, setActiveOverviewTab] = useState<OverviewTab>('summary');
+  const [exportStatus, setExportStatus] = useState<{type: 'success' | 'error', message: string} | null>(null);
   
+  React.useEffect(() => {
+    if (isOpen) {
+      setSelectedOption(initialOption);
+    }
+  }, [isOpen, initialOption]);
+
   // Git repository settings
   const [gitSettings, setGitSettings] = useState({
-    repositoryUrl: '',
+    repositoryName: currentProject?.name?.toLowerCase().replace(/\s+/g, '-') || 'my-fullstack-app',
+    repositoryUrl: currentProject?.repository || '',
+    githubToken: localStorage.getItem('githubToken') || '',
     branch: 'main',
-    commitMessage: 'Initial commit from Fullstack Gen',
-    isPrivate: true
+    commitMessage: 'Update architecture from Fullstack Gen',
+    isPrivate: true,
+    createNew: !currentProject?.repository
   });
 
   // Group components by category for overview
@@ -2095,19 +2107,164 @@ The scripts automatically detect:
 
   const handleExport = async () => {
     setGenerating(true);
+    setExportStatus(null);
     try {
       if (selectedOption === 'zip') {
         const zip = generateProjectStructure();
         const blob = await zip.generateAsync({ type: 'blob' });
         saveAs(blob, `${projectName}.zip`);
+        setExportStatus({ type: 'success', message: 'Project downloaded successfully!' });
       } else if (selectedOption === 'git') {
-        // Simulate Git push (in a real implementation, this would integrate with Git APIs)
-        console.log('Pushing to Git repository:', gitSettings.repositoryUrl);
-        // Here you would implement actual Git integration
-        alert('Git integration would be implemented here. For now, the ZIP option is available.');
+        if (!gitSettings.githubToken) throw new Error('GitHub token is required');
+        
+        localStorage.setItem('githubToken', gitSettings.githubToken);
+        const token = gitSettings.githubToken;
+        let repoName = gitSettings.repositoryName;
+        let owner = '';
+
+        if (!gitSettings.createNew) {
+          if (!gitSettings.repositoryUrl) throw new Error('Repository URL is required');
+          const match = gitSettings.repositoryUrl.match(/github\.com\/([^\/]+)\/([^\/.]+)/);
+          if (match) {
+            owner = match[1];
+            repoName = match[2].replace(/\.git$/, ''); // Remove .git if present
+          } else {
+            throw new Error('Invalid GitHub Repository URL. Expected format: https://github.com/owner/repo');
+          }
+        } else {
+          if (!repoName) throw new Error('Repository name is required');
+        }
+
+        // 1. Authenticate & Get User
+        const userRes = await fetch('https://api.github.com/user', {
+          headers: { Authorization: `token ${token}` }
+        });
+        if (!userRes.ok) throw new Error('Invalid GitHub token. Ensure your token is valid and has "repo" scope.');
+        const user = await userRes.json();
+        if (!owner) owner = user.login;
+
+        // 2. Get or Create Repository
+        let repoRes = await fetch(`https://api.github.com/repos/${owner}/${repoName}`, {
+          headers: { Authorization: `token ${token}` }
+        });
+        let defaultBranch = gitSettings.branch || 'main';
+
+        if (repoRes.ok) {
+          const repoData = await repoRes.json();
+          defaultBranch = repoData.default_branch || defaultBranch;
+        } else {
+          if (gitSettings.createNew) {
+            const createRes = await fetch(`https://api.github.com/user/repos`, {
+              method: 'POST',
+              headers: { Authorization: `token ${token}`, 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                name: repoName,
+                private: gitSettings.isPrivate,
+                auto_init: true
+              })
+            });
+            if (!createRes.ok) {
+              const err = await createRes.json();
+              throw new Error('Failed to create repository: ' + (err.message || 'Unknown error'));
+            }
+            const repoData = await createRes.json();
+            defaultBranch = repoData.default_branch || defaultBranch;
+            
+            // Wait briefly for GitHub to initialize the repo fully
+            await new Promise(r => setTimeout(r, 3000));
+          } else {
+            throw new Error(`Repository not found at https://github.com/${owner}/${repoName} or you lack permissions.`);
+          }
+        }
+
+        // 3. Get Base Tree from the latest commit
+        const baseBranchRes = await fetch(`https://api.github.com/repos/${owner}/${repoName}/git/refs/heads/${defaultBranch}`, {
+          headers: { Authorization: `token ${token}` }
+        });
+        if (!baseBranchRes.ok) throw new Error(`Could not find default branch ${defaultBranch}`);
+        const baseBranchData = await baseBranchRes.json();
+        const latestCommitSha = baseBranchData.object.sha;
+
+        const commitRes = await fetch(`https://api.github.com/repos/${owner}/${repoName}/git/commits/${latestCommitSha}`, {
+          headers: { Authorization: `token ${token}` }
+        });
+        const commitData = await commitRes.json();
+        const baseTreeSha = commitData.tree.sha;
+
+        // 4. Create Tree
+        const tree: any[] = [];
+        const zip = generateProjectStructure();
+        
+        const filePromises: Promise<void>[] = [];
+        zip.forEach((relativePath, zipEntry) => {
+          if (!zipEntry.dir) {
+            filePromises.push((async () => {
+              const content = await zipEntry.async('string');
+              tree.push({
+                path: relativePath,
+                mode: '100644',
+                type: 'blob',
+                content: content
+              });
+            })());
+          }
+        });
+        await Promise.all(filePromises);
+
+        const createTreeRes = await fetch(`https://api.github.com/repos/${owner}/${repoName}/git/trees`, {
+          method: 'POST',
+          headers: { Authorization: `token ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            base_tree: baseTreeSha,
+            tree: tree
+          })
+        });
+        if (!createTreeRes.ok) throw new Error('Failed to create git tree');
+        const treeData = await createTreeRes.json();
+        const newTreeSha = treeData.sha;
+
+        // 5. Create Commit
+        const createCommitRes = await fetch(`https://api.github.com/repos/${owner}/${repoName}/git/commits`, {
+          method: 'POST',
+          headers: { Authorization: `token ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            message: gitSettings.commitMessage || 'Automated commit from Fullstack Gen',
+            tree: newTreeSha,
+            parents: [latestCommitSha]
+          })
+        });
+        if (!createCommitRes.ok) throw new Error('Failed to create commit');
+        const newCommitData = await createCommitRes.json();
+        const newCommitSha = newCommitData.sha;
+
+        // 6. Update or Create Branch Ref
+        const targetBranchRef = `refs/heads/${gitSettings.branch || 'main'}`;
+        const updateRefRes = await fetch(`https://api.github.com/repos/${owner}/${repoName}/git/${targetBranchRef}`, {
+          method: 'PATCH',
+          headers: { Authorization: `token ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sha: newCommitSha,
+            force: true
+          })
+        });
+
+        if (!updateRefRes.ok) {
+          const createRefRes = await fetch(`https://api.github.com/repos/${owner}/${repoName}/git/refs`, {
+            method: 'POST',
+            headers: { Authorization: `token ${token}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              ref: targetBranchRef,
+              sha: newCommitSha
+            })
+          });
+          if (!createRefRes.ok) throw new Error('Failed to create new branch reference');
+        }
+        
+        setExportStatus({ type: 'success', message: `Successfully pushed to github.com/${owner}/${repoName} on branch ${gitSettings.branch || 'main'}` });
       }
     } catch (error) {
       console.error('Error exporting project:', error);
+      setExportStatus({ type: 'error', message: error instanceof Error ? error.message : 'An error occurred during export.' });
     } finally {
       setGenerating(false);
     }
@@ -2187,64 +2344,117 @@ The scripts automatically detect:
 
           {/* Git Settings */}
           {selectedOption === 'git' && (
-            <div className="space-y-3">
+            <div className="space-y-4">
               <h3 className="font-medium text-gray-900 flex items-center space-x-2">
                 <Settings className="w-4 h-4" />
-                Git Repository Settings
+                <span>Git Repository Settings</span>
               </h3>
               
+              <div className="flex items-center space-x-6">
+                <label className="flex items-center space-x-2 cursor-pointer">
+                  <input 
+                    type="radio" 
+                    checked={gitSettings.createNew} 
+                    onChange={() => setGitSettings(prev => ({ ...prev, createNew: true }))}
+                    className="text-blue-600 focus:ring-blue-500"
+                  />
+                  <span className="text-sm font-medium text-gray-700">Create New Repository</span>
+                </label>
+                <label className="flex items-center space-x-2 cursor-pointer">
+                  <input 
+                    type="radio" 
+                    checked={!gitSettings.createNew} 
+                    onChange={() => setGitSettings(prev => ({ ...prev, createNew: false }))}
+                    className="text-blue-600 focus:ring-blue-500"
+                  />
+                  <span className="text-sm font-medium text-gray-700">Use Existing Repository</span>
+                </label>
+              </div>
+
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Repository URL
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  GitHub Personal Access Token (Requires 'repo' scope)
                 </label>
                 <input
-                  type="url"
-                  value={gitSettings.repositoryUrl}
-                  onChange={(e) => setGitSettings(prev => ({ ...prev, repositoryUrl: e.target.value }))}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="https://github.com/username/repository.git"
+                  type="password"
+                  value={gitSettings.githubToken}
+                  onChange={(e) => setGitSettings(prev => ({ ...prev, githubToken: e.target.value }))}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                  placeholder="ghp_..."
                 />
+                <p className="text-xs text-gray-500 mt-1">
+                  Your token is stored locally for convenience. <a href="https://github.com/settings/tokens/new?scopes=repo" target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">Generate a token</a>.
+                </p>
               </div>
+
+              {gitSettings.createNew ? (
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Repository Name
+                    </label>
+                    <input
+                      type="text"
+                      value={gitSettings.repositoryName}
+                      onChange={(e) => setGitSettings(prev => ({ ...prev, repositoryName: e.target.value }))}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                      placeholder="my-fullstack-app"
+                    />
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      id="isPrivate"
+                      checked={gitSettings.isPrivate}
+                      onChange={(e) => setGitSettings(prev => ({ ...prev, isPrivate: e.target.checked }))}
+                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+                    <label htmlFor="isPrivate" className="text-sm text-gray-700">
+                      Make repository private
+                    </label>
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Repository URL
+                  </label>
+                  <input
+                    type="url"
+                    value={gitSettings.repositoryUrl}
+                    onChange={(e) => setGitSettings(prev => ({ ...prev, repositoryUrl: e.target.value }))}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                    placeholder="https://github.com/username/repository"
+                  />
+                </div>
+              )}
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
                     Branch
                   </label>
                   <input
                     type="text"
                     value={gitSettings.branch}
                     onChange={(e) => setGitSettings(prev => ({ ...prev, branch: e.target.value }))}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
                     placeholder="main"
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
                     Commit Message
                   </label>
                   <input
                     type="text"
                     value={gitSettings.commitMessage}
                     onChange={(e) => setGitSettings(prev => ({ ...prev, commitMessage: e.target.value }))}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="Initial commit"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                    placeholder="Update architecture"
                   />
                 </div>
-              </div>
-
-              <div className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  id="isPrivate"
-                  checked={gitSettings.isPrivate}
-                  onChange={(e) => setGitSettings(prev => ({ ...prev, isPrivate: e.target.checked }))}
-                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                />
-                <label htmlFor="isPrivate" className="text-sm text-gray-700">
-                  Make repository private
-                </label>
               </div>
             </div>
           )}
@@ -2288,6 +2498,14 @@ The scripts automatically detect:
           {/* Project Overview */}
           {renderProjectOverview()}
         </div>
+        
+        {/* Export Status */}
+        {exportStatus && (
+          <div className={`mt-6 p-4 rounded-lg flex items-start space-x-3 ${exportStatus.type === 'success' ? 'bg-green-50 border border-green-200 text-green-800' : 'bg-red-50 border border-red-200 text-red-800'}`}>
+            {exportStatus.type === 'success' ? <CheckCircle className="w-5 h-5 flex-shrink-0" /> : <AlertCircle className="w-5 h-5 flex-shrink-0" />}
+            <div className="text-sm font-medium">{exportStatus.message}</div>
+          </div>
+        )}
 
         <div className="flex space-x-3 mt-6">
           <button
@@ -2298,7 +2516,7 @@ The scripts automatically detect:
           </button>
           <button
             onClick={handleExport}
-            disabled={generating || (selectedOption === 'git' && !gitSettings.repositoryUrl)}
+            disabled={generating || (selectedOption === 'git' && !gitSettings.githubToken)}
             className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center space-x-2"
           >
             {generating ? (

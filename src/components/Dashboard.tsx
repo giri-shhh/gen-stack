@@ -337,7 +337,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onCreateNewProject, onLogou
 
       {showEditModal && projectToEdit && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 max-w-md w-full mx-4 shadow-xl">
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 max-w-md w-full mx-4 shadow-xl max-h-[90vh] overflow-y-auto">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">Edit Project</h3>
             <form
               onSubmit={e => {
@@ -364,6 +364,36 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onCreateNewProject, onLogou
                   value={projectToEdit.description || ''}
                   onChange={e => setProjectToEdit({ ...projectToEdit, description: e.target.value })}
                   rows={3}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">GitHub Repository URL</label>
+                <input
+                  type="url"
+                  className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                  value={projectToEdit.repository || ''}
+                  onChange={e => setProjectToEdit({ ...projectToEdit, repository: e.target.value })}
+                  placeholder="https://github.com/..."
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Live Application URL</label>
+                <input
+                  type="url"
+                  className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                  value={projectToEdit.deploymentUrl || ''}
+                  onChange={e => setProjectToEdit({ ...projectToEdit, deploymentUrl: e.target.value })}
+                  placeholder="https://..."
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Version</label>
+                <input
+                  type="text"
+                  className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                  value={projectToEdit.version || ''}
+                  onChange={e => setProjectToEdit({ ...projectToEdit, version: e.target.value })}
+                  placeholder="1.0.0"
                 />
               </div>
               <div>

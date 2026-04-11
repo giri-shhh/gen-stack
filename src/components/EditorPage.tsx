@@ -51,7 +51,6 @@ interface EditorPageProps {
 export default function EditorPage({ user, currentProject, setCurrentProject, onLogout }: EditorPageProps) {
   const navigate = useNavigate();
   const [toast, setToast] = useState<ToastType | null>(null);
-  const [showExportModal, setShowExportModal] = useState(false);
 
   // Mobile state
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
@@ -581,14 +580,6 @@ export default function EditorPage({ user, currentProject, setCurrentProject, on
           />
         )}
         
-        <ExportModal
-          isOpen={showExportModal}
-          onClose={() => setShowExportModal(false)}
-          components={components}
-          connections={connections}
-          currentProject={currentProject || undefined}
-        />
-
         {showModuleConfig && selectedComponent && (
           <ModuleConfigScreen
             component={selectedComponent}

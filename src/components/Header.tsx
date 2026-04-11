@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
-import { Sparkles, Home, User, LogOut, Save, ChevronDown, Trash2, Download, Copy, Settings, Sun, Moon } from 'lucide-react';
+import { Sparkles, Home, User, LogOut, Save, ChevronDown, Trash2, Download, Copy, Settings, Sun, Moon, Github } from 'lucide-react';
 import ExportModal from './ExportModal';
 import { useTheme } from '../contexts/ThemeContext';
 import type { HeaderProps } from '../types';
 
-const Header: React.FC<HeaderProps> = ({ onBackToLanding, user, onLogout, currentProject, onSaveProject, onDeleteProject, components, connections }) => {
+const Header: React.FC<HeaderProps & { onPushToGitHub?: () => void }> = ({ onBackToLanding, user, onLogout, currentProject, onSaveProject, onDeleteProject, components, connections }) => {
   const { theme, toggleTheme } = useTheme();
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
+  const [exportModalTab, setExportModalTab] = useState<'zip' | 'git'>('zip');
 
   const handleSaveProject = async () => {
     if (!onSaveProject) return;
@@ -76,12 +77,27 @@ const Header: React.FC<HeaderProps> = ({ onBackToLanding, user, onLogout, curren
               </button>
 
               <button
-                onClick={() => setShowExportModal(true)}
+                onClick={() => {
+                  setExportModalTab('zip');
+                  setShowExportModal(true);
+                }}
                 className="flex items-center space-x-1 px-2 py-1 text-xs text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200 border border-gray-200 dark:border-gray-600 rounded-md whitespace-nowrap"
                 title="Export project"
               >
                 <Download className="w-3 h-3" />
                 <span className="hidden sm:inline">Export</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  setExportModalTab('git');
+                  setShowExportModal(true);
+                }}
+                className="flex items-center space-x-1 px-2 py-1 text-xs text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100 hover:bg-gray-100 dark:hover:bg-gray-700 transition-all duration-200 border border-gray-200 dark:border-gray-600 rounded-md whitespace-nowrap"
+                title="Push to GitHub"
+              >
+                <Github className="w-3 h-3" />
+                <span className="hidden sm:inline">Push</span>
               </button>
 
               <button
@@ -156,6 +172,7 @@ const Header: React.FC<HeaderProps> = ({ onBackToLanding, user, onLogout, curren
           components={components || []}
           connections={connections || []}
           currentProject={currentProject}
+              initialOption={exportModalTab}
         />
       )}
     </>
