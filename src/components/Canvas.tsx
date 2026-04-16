@@ -167,7 +167,6 @@ const Canvas: React.FC<CanvasProps> = React.memo(({
   }, [onCanvasClick, isConnecting, isPanning]);
 
   const handleComponentClick = useCallback((component: any) => {
-    console.log('Canvas: Component clicked:', component);
     onComponentSelect(component);
   }, [onComponentSelect]);
 
@@ -190,11 +189,9 @@ const Canvas: React.FC<CanvasProps> = React.memo(({
   }, []);
 
   const handleConnectionEnd = useCallback((componentId: string) => {
-    console.log('Connection end - Start:', connectionStart, 'End:', componentId, 'isConnecting:', isConnecting);
     if (isConnecting && connectionStart) {
       if (connectionStart !== componentId) {
-        console.log('Creating connection...');
-        onConnectionAdd({ 
+        onConnectionAdd({
           id: `${connectionStart}-${componentId}`, 
           source: connectionStart, 
           target: componentId,
@@ -294,9 +291,9 @@ const Canvas: React.FC<CanvasProps> = React.memo(({
         </div>
       </div>
 
-      <div 
-        ref={canvasRef} 
-        className="canvas-background relative w-full h-full min-h-[600px] min-w-[800px] transition-transform duration-200"
+      <div
+        ref={canvasRef}
+        className="canvas-background relative w-full h-full min-h-[600px] min-w-[800px]"
         style={canvasTransformStyle}
       >
         {/* Connection Lines */}
@@ -326,33 +323,23 @@ const Canvas: React.FC<CanvasProps> = React.memo(({
         )}
 
         {/* Canvas Components */}
-        {components.map((component) => {
-          const handleDelete = () => {
-            console.log('Deleting component:', component.id);
-            onComponentRemove(component.id);
-          };
-          const handleConnEnd = () => {
-            console.log('Connection end click on:', component.id);
-            handleConnectionEnd(component.id);
-          };
-          return (
-            <CanvasComponent
-              key={component.id}
-              component={component}
-              isSelected={selectedComponent?.id === component.id}
-              isConnecting={isConnecting}
-              isConnectionStart={connectionStart === component.id}
-              onSelect={() => handleComponentClick(component)}
-              onUpdate={(updates) => onComponentUpdate(component.id, updates)}
-              onRemove={handleDelete}
-              onConnectionStart={() => handleConnectionStart(component.id)}
-              onConnectionEnd={handleConnEnd}
-              onDoubleClick={() => onComponentDoubleClick?.(component)}
-              onViewProjectStructure={() => onViewProjectStructure?.(component)}
-              zoom={zoom}
-            />
-          );
-        })}
+        {components.map((component) => (
+          <CanvasComponent
+            key={component.id}
+            component={component}
+            isSelected={selectedComponent?.id === component.id}
+            isConnecting={isConnecting}
+            isConnectionStart={connectionStart === component.id}
+            onSelect={() => handleComponentClick(component)}
+            onUpdate={(updates) => onComponentUpdate(component.id, updates)}
+            onRemove={() => onComponentRemove(component.id)}
+            onConnectionStart={() => handleConnectionStart(component.id)}
+            onConnectionEnd={() => handleConnectionEnd(component.id)}
+            onDoubleClick={() => onComponentDoubleClick?.(component)}
+            onViewProjectStructure={() => onViewProjectStructure?.(component)}
+            zoom={zoom}
+          />
+        ))}
 
         {/* Connection Mode Indicator */}
         {isConnecting && (

@@ -7,7 +7,6 @@ export const useCanvasState = () => {
   const [selectedComponent, setSelectedComponent] = useState<CanvasComponent | null>(null);
 
   const setSelectedComponentWithLog = useCallback((component: CanvasComponent | null) => {
-    console.log('Setting selected component:', component);
     setSelectedComponent(component);
   }, []);
 

@@ -76,10 +76,6 @@ export default function EditorPage({ user, currentProject, setCurrentProject, on
     loadCanvasState
   } = useCanvasState();
 
-  // Debug component selection
-  useEffect(() => {
-    console.log('App: Selected component changed:', selectedComponent);
-  }, [selectedComponent]);
 
   // Handle window resize for mobile detection
   useEffect(() => {
@@ -227,19 +223,6 @@ export default function EditorPage({ user, currentProject, setCurrentProject, on
     }
   };
 
-  useEffect(() => {
-    (window as any).debugSaveProject = () => {
-      console.log('Current project:', currentProject);
-      console.log('Components:', components);
-      console.log('Connections:', connections);
-    };
-    (window as any).debugCheckSavedProjects = () => {
-      const saved = localStorage.getItem('userProjects');
-      if (saved) {
-        console.log('Parsed projects:', JSON.parse(saved));
-      }
-    };
-  }, [currentProject, components, connections]);
 
   const handleBackToLanding = () => {
     setCurrentProject(null);
@@ -425,33 +408,50 @@ export default function EditorPage({ user, currentProject, setCurrentProject, on
   };
 
   const handleDragEnd = (event: any) => {
-    const { active, over } = event;
-    
-    // Handle tech items being dragged from sidebar to canvas
-    if (over && over.id === 'canvas' && active.id.startsWith('tech-')) {
+    const { active, over, delta } = event;
+
+    // Handle moving an existing canvas component — use event.delta (screen pixels)
+    // divided by the current canvas zoom to get canvas-space displacement.
+    if (active.data?.current?.type === 'canvas-component') {
+      const component = active.data.current.component as CanvasComponent;
+      const canvasEl = document.querySelector('.canvas-background') as any;
+      const zoom: number = canvasEl?._zoom ?? 1;
+      updateComponent(component.id, {
+        position: {
+          x: component.position.x + delta.x / zoom,
+          y: component.position.y + delta.y / zoom,
+        },
+      });
+    }
+
+    // Handle tech items dragged from the sidebar onto the canvas
+    if (over?.id === 'canvas' && active.id.startsWith('tech-')) {
       const techId = active.id.replace('tech-', '');
       const tech = getTechById(techId);
       if (tech) {
         const canvasElement = document.querySelector('[data-droppable-id="canvas"]');
         if (canvasElement) {
           const rect = canvasElement.getBoundingClientRect();
-          const centerX = rect.left + rect.width / 2;
-          const centerY = rect.top + rect.height / 2;
+          // Read current pan/zoom from the canvas-background element
+          const canvasEl = document.querySelector('.canvas-background') as any;
+          const zoom: number = canvasEl?._zoom ?? 1;
+          const pan: { x: number; y: number } = canvasEl?._pan ?? { x: 0, y: 0 };
+          // Convert the visible canvas center to canvas-space coordinates
+          const cx = (rect.width / 2 - pan.x) / zoom;
+          const cy = (rect.height / 2 - pan.y) / zoom;
           const newComponent: CanvasComponent = {
             id: `${techId}-${Date.now()}`,
             type: techId,
             techId: techId,
-            position: { x: centerX - 100, y: centerY - 70 },
+            position: { x: cx - 100, y: cy - 70 },
             size: { width: 200, height: 140 },
-            properties: { name: tech.name, description: tech.description, color: tech.color }
+            properties: { name: tech.name, description: tech.description, color: tech.color },
           };
           addComponent(newComponent);
         }
       }
     }
-    // NOTE: Canvas component position updates are now handled by CanvasComponent's useEffect
-    // when isDragging state changes, so we don't need to handle it here
-    
+
     setDraggedTech(null);
     setDragOverlayContent(null);
   };
