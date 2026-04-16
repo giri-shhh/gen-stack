@@ -89,7 +89,7 @@ const CanvasComponent: React.FC<CanvasComponentProps> = React.memo(({
     base.push(isDragging ? 'cursor-grabbing' : isSelected ? 'cursor-grab' : 'cursor-pointer');
 
     // Shadow
-    base.push(isDragging ? 'shadow-2xl z-50' : isSelected ? 'shadow-lg' : 'shadow-md hover:shadow-lg');
+    base.push(isDragging ? 'shadow-2xl z-50' : isSelected ? 'shadow-lg z-20' : 'shadow-md hover:shadow-lg z-10');
 
     // Ring / border state
     if (justPlaced) {

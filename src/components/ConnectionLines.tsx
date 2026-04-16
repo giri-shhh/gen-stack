@@ -72,7 +72,7 @@ const ConnectionLines: React.FC<ConnectionLinesProps> = ({
   return (
     <svg
       className="absolute top-0 left-0"
-      style={{ width: '100%', height: '100%', zIndex: 1, overflow: 'visible' }}
+      style={{ width: '100%', height: '100%', overflow: 'visible', pointerEvents: 'none' }}
     >
       <defs>
         {/* Per-color arrowhead markers */}
@@ -149,7 +149,7 @@ const ConnectionLines: React.FC<ConnectionLinesProps> = ({
         return (
           <g
             key={connection.id}
-            style={{ cursor: 'pointer' }}
+            style={{ cursor: 'pointer', pointerEvents: 'auto' }}
             onClick={(e) => {
               e.stopPropagation();
               onConnectionClick?.(connection.id);

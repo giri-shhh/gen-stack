@@ -75,29 +75,29 @@ const Canvas: React.FC<CanvasProps> = React.memo(({
   // Handle pan start
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     const target = e.target as HTMLElement;
-    
+
     // Check if clicking on a component or component-related element
-    const isClickingOnComponent = target.closest('[data-canvas-component]') || 
-                                 target.closest('.resize-handle') ||
-                                 target.closest('[data-component-button]');
-    
-    // Allow panning in these cases:
-    // 1. Middle mouse (always)
+    const isClickingOnComponent = !!target.closest('[data-canvas-component]') ||
+                                  !!target.closest('.resize-handle') ||
+                                  !!target.closest('[data-component-button]');
+
+    // Check if clicking within the canvas drawing area (exclude floating UI panels
+    // that sit outside or on top of the canvas, e.g. zoom controls, connection banner)
+    const isOnCanvasBackground = !target.closest('[data-canvas-ui]') &&
+                                 (target === canvasRef.current || !!target.closest('.canvas-background'));
+
+    // Allow panning when:
+    // 1. Middle mouse button (always)
     // 2. Alt + Left click (always)
-    // 3. Left click when not clicking on a component (even if one is selected)
-    const canPan = e.button === 1 || 
-                   (e.button === 0 && e.altKey) || 
-                   (e.button === 0 && !isClickingOnComponent);
-    
-    if (canPan) {
-      const isCanvasBackground = target === canvasRef.current || target.closest('.canvas-background');
-      
-      // Start panning if clicking on background or using force methods (middle/alt)
-      if (isCanvasBackground || e.button === 1 || e.altKey || !isClickingOnComponent) {
-        e.preventDefault();
-        setIsPanning(true);
-        setPanStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
-      }
+    // 3. Left click on canvas background when not clicking on a component
+    const shouldPan = e.button === 1 ||
+                      (e.button === 0 && e.altKey) ||
+                      (e.button === 0 && !isClickingOnComponent && isOnCanvasBackground);
+
+    if (shouldPan) {
+      e.preventDefault();
+      setIsPanning(true);
+      setPanStart({ x: e.clientX - pan.x, y: e.clientY - pan.y });
     }
   }, [pan]);
 
@@ -254,9 +254,10 @@ const Canvas: React.FC<CanvasProps> = React.memo(({
       onClick={handleCanvasClick}
       onWheel={handleWheel}
       onMouseDown={handleMouseDown}
+      onMouseUp={handleMouseUp}
     >
       {/* Bottom-left controls and navigation note */}
-      <div className="absolute bottom-4 left-4 z-50 flex flex-row items-end space-x-4">
+      <div className="absolute bottom-4 left-4 z-50 flex flex-row items-end space-x-4" data-canvas-ui="true">
         {/* Zoom Controls */}
         <div className="flex flex-col space-y-2">
           <div className="bg-white bg-opacity-95 backdrop-blur-sm rounded-lg shadow-lg border border-gray-200 p-2">
@@ -357,7 +358,7 @@ const Canvas: React.FC<CanvasProps> = React.memo(({
 
         {/* Connection Mode Indicator */}
         {isConnecting && (
-          <div className="fixed top-4 left-1/2 transform -translate-x-1/2 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium z-50 flex items-center space-x-3 shadow-lg">
+          <div className="fixed top-4 left-1/2 transform -translate-x-1/2 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium z-50 flex items-center space-x-3 shadow-lg" data-canvas-ui="true">
             <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
             <span>Click on a component to create connection</span>
             <button
