@@ -72,6 +72,7 @@ export default function EditorPage({ user, currentProject, setCurrentProject, on
     removeComponent,
     addConnection,
     removeConnection,
+    updateConnection,
     resetCanvas,
     loadCanvasState
   } = useCanvasState();
@@ -567,6 +568,7 @@ export default function EditorPage({ user, currentProject, setCurrentProject, on
                   onComponentRemove={removeComponent}
                   onConnectionAdd={(connection: Connection) => addConnection(connection.source, connection.target)}
                   onConnectionRemove={removeConnection}
+                  onConnectionUpdate={updateConnection}
                   onCanvasClick={clearSelection}
                   onAddComponent={addComponent}
                   draggedTech={draggedTech || undefined}

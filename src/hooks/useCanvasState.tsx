@@ -84,6 +84,12 @@ export const useCanvasState = () => {
     setConnections(prev => prev.filter(conn => conn.id !== id));
   }, []);
 
+  const updateConnection = useCallback((id: string, updates: Partial<Connection>) => {
+    setConnections(prev =>
+      prev.map(conn => conn.id === id ? { ...conn, ...updates } : conn)
+    );
+  }, []);
+
   const clearSelection = useCallback(() => {
     setSelectedComponent(null);
   }, []);
@@ -109,6 +115,7 @@ export const useCanvasState = () => {
     removeComponent,
     addConnection,
     removeConnection,
+    updateConnection,
     setSelectedComponent: setSelectedComponentWithLog,
     clearSelection,
     resetCanvas,

@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import { useDroppable } from '@dnd-kit/core';
 import CanvasComponent from './CanvasComponent';
 import ConnectionLines from './ConnectionLines';
+import ConnectionTypeModal from './ConnectionTypeModal';
 import type { CanvasProps } from '../types';
 
 const Canvas: React.FC<CanvasProps> = React.memo(({
@@ -12,6 +13,8 @@ const Canvas: React.FC<CanvasProps> = React.memo(({
   onComponentUpdate,
   onComponentRemove,
   onConnectionAdd,
+  onConnectionRemove,
+  onConnectionUpdate,
   onCanvasClick,
   onComponentDoubleClick,
   onViewProjectStructure,
@@ -27,7 +30,8 @@ const Canvas: React.FC<CanvasProps> = React.memo(({
   const canvasRef = useRef<HTMLDivElement>(null);
   const [isConnecting, setIsConnecting] = useState(false);
   const [connectionStart, setConnectionStart] = useState<string | null>(null);
-  const [gridSize] = useState(25); // Grid size for snap-to-grid
+  const [selectedConnectionId, setSelectedConnectionId] = useState<string | null>(null);
+  const [gridSize] = useState(25);
 
   // Zoom and pan state
   const [zoom, setZoom] = useState(1);
@@ -155,10 +159,10 @@ const Canvas: React.FC<CanvasProps> = React.memo(({
   const handleCanvasClick = useCallback((e: React.MouseEvent) => {
     const target = e.target as HTMLElement;
     const isCanvasBackground = target === canvasRef.current || target.closest('.canvas-background');
-    
+
     if (isCanvasBackground && !isPanning) {
       onCanvasClick();
-      // Cancel connection mode if clicking on empty canvas
+      setSelectedConnectionId(null);
       if (isConnecting) {
         setIsConnecting(false);
         setConnectionStart(null);
@@ -167,6 +171,7 @@ const Canvas: React.FC<CanvasProps> = React.memo(({
   }, [onCanvasClick, isConnecting, isPanning]);
 
   const handleComponentClick = useCallback((component: any) => {
+    setSelectedConnectionId(null); // deselect any connection when a component is clicked
     onComponentSelect(component);
   }, [onComponentSelect]);
 
@@ -191,17 +196,24 @@ const Canvas: React.FC<CanvasProps> = React.memo(({
   const handleConnectionEnd = useCallback((componentId: string) => {
     if (isConnecting && connectionStart) {
       if (connectionStart !== componentId) {
+        const newId = `${connectionStart}-${componentId}`;
         onConnectionAdd({
-          id: `${connectionStart}-${componentId}`, 
-          source: connectionStart, 
+          id: newId,
+          source: connectionStart,
           target: componentId,
-          type: 'connection'
+          type: 'connection',
         });
+        // Auto-open the type selector for the new connection
+        setSelectedConnectionId(newId);
       }
       setIsConnecting(false);
       setConnectionStart(null);
     }
   }, [isConnecting, connectionStart, onConnectionAdd]);
+
+  const handleConnectionClick = useCallback((connectionId: string) => {
+    setSelectedConnectionId((prev) => prev === connectionId ? null : connectionId);
+  }, []);
 
   // DndKit handles all drag and drop logic, so we don't need native handlers
   // The drop indicator is handled by the isOver state from useDroppable
@@ -304,6 +316,8 @@ const Canvas: React.FC<CanvasProps> = React.memo(({
           connectionStart={connectionStart}
           mousePosition={mousePosition}
           zoom={zoom}
+          selectedConnectionId={selectedConnectionId}
+          onConnectionClick={handleConnectionClick}
         />
 
         {/* Drop indicator is now handled by DndKit's isOver state */}
@@ -384,6 +398,24 @@ const Canvas: React.FC<CanvasProps> = React.memo(({
           </div>
         )}
       </div>
+
+      {/* Connection type configuration modal — rendered outside the zoomed canvas so it's unaffected by pan/zoom */}
+      {selectedConnectionId && (() => {
+        const conn = connections.find((c) => c.id === selectedConnectionId);
+        if (!conn) return null;
+        return (
+          <ConnectionTypeModal
+            connection={conn}
+            components={components}
+            onUpdate={onConnectionUpdate}
+            onDelete={(id) => {
+              onConnectionRemove(id);
+              setSelectedConnectionId(null);
+            }}
+            onClose={() => setSelectedConnectionId(null)}
+          />
+        );
+      })()}
     </div>
   );
 });

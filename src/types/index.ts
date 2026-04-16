@@ -45,12 +45,25 @@ export interface CanvasComponent {
   selectedLibraries?: any[];
 }
 
+// Connection protocol types
+export type ConnectionProtocol =
+  | 'rest'
+  | 'graphql'
+  | 'grpc'
+  | 'websocket'
+  | 'message-queue'
+  | 'database'
+  | 'cache'
+  | 'event'
+  | 'custom';
+
 // Connection types
 export interface Connection {
   id: string;
   source: string;
   target: string;
   type: string;
+  connectionType?: ConnectionProtocol; // protocol between the two modules
   label?: string;
 }
 
@@ -122,6 +135,7 @@ export interface CanvasProps {
   onComponentRemove: (id: string) => void;
   onConnectionAdd: (connection: Connection) => void;
   onConnectionRemove: (id: string) => void;
+  onConnectionUpdate: (id: string, updates: Partial<Connection>) => void;
   onCanvasClick: () => void;
   onAddComponent: (component: CanvasComponent) => void;
   draggedTech?: Technology;
@@ -165,6 +179,8 @@ export interface ConnectionLinesProps {
   connectionStart: string | null;
   mousePosition: { x: number; y: number } | null;
   zoom?: number;
+  selectedConnectionId?: string | null;
+  onConnectionClick?: (connectionId: string) => void;
 }
 
 export interface CanvasComponentProps {
