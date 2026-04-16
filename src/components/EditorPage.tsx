@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { DndContext, DragOverlay, closestCenter } from '@dnd-kit/core';
-import { Settings, BrainCircuit, Loader2, Key, RefreshCw } from 'lucide-react';
+import { Settings, BrainCircuit, Loader2, Key, RefreshCw, MessageSquare } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 
 import Canvas from './Canvas';
@@ -9,6 +9,7 @@ import PropertiesPanel from './PropertiesPanelModular';
 import ResizablePanel from './ResizablePanel';
 import Header from './Header';
 import Toast from './Toast';
+import ChatBot from './ChatBot';
 import { useCanvasState } from '../hooks/useCanvasState';
 import { getTechById } from '../data/techStack';
 import { generateArchitecture, getStoredApiKey, saveApiKey } from '../lib/aiArchitectureGenerator';
@@ -56,6 +57,7 @@ export default function EditorPage({ user, currentProject, setCurrentProject, on
   const [aiKeyPrompt, setAiKeyPrompt] = useState(false);
   const [aiKeyInput, setAiKeyInput] = useState('');
   const aiGeneratedRef = useRef(false);
+  const [isChatOpen, setIsChatOpen] = useState(false);
 
   // Mobile state
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
@@ -663,21 +665,40 @@ export default function EditorPage({ user, currentProject, setCurrentProject, on
                   </div>
                 )}
 
-                {selectedComponent && !isMobile && (
-                  <div className="absolute bottom-4 right-4 z-50">
+                {!isMobile && (
+                  <div className="absolute bottom-4 right-4 z-50 flex flex-col gap-3 items-end">
+                    {selectedComponent && (
+                      <button
+                        onClick={() => {
+                          const propertiesPanel = document.querySelector('[data-properties-panel]');
+                          if (propertiesPanel) {
+                            propertiesPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                          }
+                        }}
+                        className="bg-green-600 hover:bg-green-700 text-white p-3 rounded-full shadow-lg transition-all duration-200 hover:scale-110"
+                        title="Open Properties Panel (Press 'P' key)"
+                      >
+                        <Settings className="w-5 h-5" />
+                      </button>
+                    )}
                     <button
-                      onClick={() => {
-                        const propertiesPanel = document.querySelector('[data-properties-panel]');
-                        if (propertiesPanel) {
-                          propertiesPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-                        }
-                      }}
-                      className="bg-green-600 hover:bg-green-700 text-white p-3 rounded-full shadow-lg transition-all duration-200 hover:scale-110"
-                      title="Open Properties Panel (Press 'P' key)"
+                      onClick={() => setIsChatOpen(!isChatOpen)}
+                      className="bg-purple-600 hover:bg-purple-700 text-white p-3 rounded-full shadow-lg transition-all duration-200 hover:scale-110"
+                      title="AI Architecture Assistant"
                     >
-                      <Settings className="w-5 h-5" />
+                      <MessageSquare className="w-5 h-5" />
                     </button>
                   </div>
+                )}
+
+                {isChatOpen && !isMobile && (
+                  <ChatBot 
+                    onClose={() => setIsChatOpen(false)}
+                    components={components}
+                    connections={connections}
+                    onUpdateArchitecture={loadCanvasState}
+                    currentProject={currentProject}
+                  />
                 )}
               </div>
             )}
