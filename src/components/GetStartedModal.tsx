@@ -49,16 +49,22 @@ const GetStartedModal: React.FC<ExtendedProps> = ({
   });
 
   const handleGithubLogin = () => {
-    const user = {
-      id: `github_${Date.now()}`,
-      name: 'GitHub User',
-      email: 'user@github.com',
-      avatar: `https://ui-avatars.com/api/?name=GitHub+User&background=24292e&color=fff`,
-    };
-    localStorage.setItem('user', JSON.stringify(user));
-    if (onAuthSuccess) onAuthSuccess(user);
-    else window.location.reload();
-    onClose();
+    const GITHUB_CLIENT_ID = import.meta.env.VITE_GITHUB_CLIENT_ID || '';
+    if (!GITHUB_CLIENT_ID) {
+      const user = {
+        id: `github_${Date.now()}`,
+        name: 'GitHub User',
+        email: 'user@github.com',
+        avatar: `https://ui-avatars.com/api/?name=GitHub+User&background=24292e&color=fff`,
+      };
+      localStorage.setItem('user', JSON.stringify(user));
+      if (onAuthSuccess) onAuthSuccess(user);
+      else window.location.reload();
+      onClose();
+      return;
+    }
+    const redirectUri = window.location.origin;
+    window.location.href = `https://github.com/login/oauth/authorize?client_id=${GITHUB_CLIENT_ID}&scope=user:email&redirect_uri=${encodeURIComponent(redirectUri)}`;
   };
 
   if (!isOpen) return null;

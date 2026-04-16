@@ -4,6 +4,7 @@ import {
   GitBranch, Box, Activity
 } from 'lucide-react';
 import CreateProjectModal from './CreateProjectModal';
+import TemplatesModal from './TemplatesModal';
 import UserProfile from './dashboard/UserProfile';
 import CompactOverview from './dashboard/CompactOverview';
 import ViewModeToggle from './dashboard/ViewModeToggle';
@@ -32,10 +33,12 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onCreateNewProject, onLogou
     projectToDelete,
     showEditModal,
     projectToEdit,
+    showTemplatesModal,
     setCurrentFilter,
     setViewMode,
     setSearchQuery,
     setShowCreateModal,
+    setShowTemplatesModal,
     setProjectToEdit,
     handleCreateProject,
     handleDeleteProject,
@@ -58,6 +61,11 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onCreateNewProject, onLogou
 
   const handleCloseModal = () => {
     setShowCreateModal(false);
+  };
+
+  const handleUseTemplate = async (project: Project) => {
+    await handleCreateProject(project);
+    onCreateNewProject(project);
   };
 
   const stats = useMemo(() => {
@@ -299,6 +307,12 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onCreateNewProject, onLogou
         isOpen={showCreateModal}
         onClose={handleCloseModal}
         onCreateProject={handleCreateProject}
+      />
+
+      <TemplatesModal
+        isOpen={showTemplatesModal}
+        onClose={() => setShowTemplatesModal(false)}
+        onUseTemplate={handleUseTemplate}
       />
 
       {showDeleteModal && projectToDelete && (

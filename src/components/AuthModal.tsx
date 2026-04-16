@@ -4,6 +4,7 @@ import { useGoogleLogin } from '@react-oauth/google';
 import type { AuthModalProps } from '../types';
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
+const GITHUB_CLIENT_ID = import.meta.env.VITE_GITHUB_CLIENT_ID || '';
 
 const AuthModal: React.FC<AuthModalProps> = ({ isOpen, mode = 'signin', onClose, onAuthSuccess }) => {
   const [authMode, setAuthMode] = useState(mode);
@@ -95,19 +96,12 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, mode = 'signin', onClose,
   });
 
   const handleGithubLogin = () => {
-    // Mock fallback for GitHub
-    const user = {
-      id: `github_${Date.now()}`,
-      name: 'GitHub User',
-      email: 'user@github.com',
-      avatar: `https://ui-avatars.com/api/?name=GitHub+User&background=24292e&color=fff`,
-    };
-    localStorage.setItem('user', JSON.stringify(user));
-    onAuthSuccess(user);
-    onClose();
+    const redirectUri = window.location.origin;
+    window.location.href = `https://github.com/login/oauth/authorize?client_id=${GITHUB_CLIENT_ID}&scope=user:email&redirect_uri=${encodeURIComponent(redirectUri)}`;
   };
 
   const isGoogleConfigured = Boolean(GOOGLE_CLIENT_ID);
+  const isGithubConfigured = Boolean(GITHUB_CLIENT_ID);
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -181,14 +175,32 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, mode = 'signin', onClose,
           )}
 
           {/* GitHub Sign-In button */}
-          <button
-            type="button"
-            onClick={handleGithubLogin}
-            className="w-full bg-[#24292F] text-white px-4 py-3 rounded-xl font-semibold hover:bg-[#24292F]/90 transition-all duration-200 flex items-center justify-center space-x-3"
-          >
-            <Github className="w-5 h-5" />
-            <span>Continue with GitHub</span>
-          </button>
+          {isGithubConfigured ? (
+            <button
+              type="button"
+              onClick={handleGithubLogin}
+              className="w-full bg-[#24292F] text-white px-4 py-3 rounded-xl font-semibold hover:bg-[#24292F]/90 transition-all duration-200 flex items-center justify-center space-x-3"
+            >
+              <Github className="w-5 h-5" />
+              <span>Continue with GitHub</span>
+            </button>
+          ) : (
+            <div className="w-full flex items-start space-x-3 px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-800">
+              <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0 text-amber-600" />
+              <span>
+                GitHub sign-in is not configured.{' '}
+                <a
+                  href="https://github.com/settings/developers"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline font-medium"
+                >
+                  Set up an OAuth App
+                </a>{' '}
+                and add <code className="bg-amber-100 px-1 rounded">VITE_GITHUB_CLIENT_ID</code> to your <code className="bg-amber-100 px-1 rounded">.env</code> file.
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Divider */}

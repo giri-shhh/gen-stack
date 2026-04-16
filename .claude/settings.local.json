@@ -2,7 +2,9 @@
   "permissions": {
     "allow": [
       "Bash(npx tsc:*)",
-      "Bash(wc -l /c/Root/github/gen-stack/src/components/*.tsx)"
+      "Bash(wc -l /c/Root/github/gen-stack/src/components/*.tsx)",
+      "Bash(find /c/Root/github/gen-stack/src -type f \\\\\\( -name \"*.ts\" -o -name \"*.tsx\" \\\\\\) -exec grep -l \"UseAppLogicReturn\" {} \\\\;)",
+      "Bash(grep -n \"type UseAppLogicReturn\\\\|interface UseAppLogicReturn\" /c/Root/github/gen-stack/src/**/*.ts*)"
     ]
   }
 }

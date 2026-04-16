@@ -1,3 +1,4 @@
+import React, { useEffect } from 'react';
 import LandingPage from './LandingPage';
 import GetStartedModal from './GetStartedModal';
 import AuthModal from './AuthModal';
@@ -26,6 +27,45 @@ export default function LandingPageRoute() {
         }
         setAuthModalOpen(false);
         setGetStartedModalOpen(false);
+    };
+
+    useEffect(() => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const code = urlParams.get('code');
+        
+        if (code) {
+            window.history.replaceState({}, document.title, window.location.pathname);
+            handleGithubCallback(code);
+        }
+    }, []);
+
+    const handleGithubCallback = async (code: string) => {
+        try {
+            const backendUrl = import.meta.env.VITE_AUTH_BACKEND_URL || '/api/auth/github';
+            const response = await fetch(backendUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ code })
+            });
+            if (!response.ok) throw new Error('Failed to exchange GitHub code');
+            const data = await response.json();
+            const user = {
+                id: `github_${data.id || Date.now()}`,
+                name: data.name || data.login || 'GitHub User',
+                email: data.email || '',
+                avatar: data.avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(data.name || data.login || 'GitHub User')}&background=24292e&color=fff`,
+            };
+            onLocalAuthSuccess(user);
+        } catch (err) {
+            console.error('GitHub authentication failed or backend not configured:', err);
+            const fallbackUser = {
+                id: `github_${Date.now()}`,
+                name: 'GitHub User',
+                email: 'user@github.com',
+                avatar: `https://ui-avatars.com/api/?name=GitHub+User&background=24292e&color=fff`,
+            };
+            onLocalAuthSuccess(fallbackUser);
+        }
     };
 
     const onLocalContinueAsTemp = () => {

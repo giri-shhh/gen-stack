@@ -1203,6 +1203,172 @@ export default function ModuleDetailPage({ currentProject, setCurrentProject }: 
     );
   };
 
+  // ── Git tab ───────────────────────────────────────────────────────────────
+  const renderGit = () => (
+    <div className="space-y-5">
+      {/* Connection */}
+      <div className="bg-white border border-gray-200 rounded-xl p-5">
+        <h4 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
+          <GitBranch className="w-4 h-4 text-blue-500" />
+          GitHub Connection
+        </h4>
+        <div className="space-y-3">
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">Personal Access Token</label>
+            <input
+              type="password"
+              value={gitToken}
+              onChange={e => { setGitToken(e.target.value); localStorage.setItem('githubToken', e.target.value); }}
+              className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 font-mono"
+              placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-500 mb-1">Repository URL</label>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={repoUrl}
+                onChange={e => setRepoUrl(e.target.value)}
+                className="flex-1 text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                placeholder="https://github.com/owner/repo"
+              />
+              <button
+                onClick={loadBranches}
+                disabled={!gitToken || !repoUrl || !!gitLoading}
+                className="px-3 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-40 whitespace-nowrap"
+              >
+                {gitLoading === 'Loading branches…' ? 'Loading…' : 'Connect'}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Branch management */}
+      <div className="bg-white border border-gray-200 rounded-xl p-5">
+        <h4 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
+          <GitBranch className="w-4 h-4 text-purple-500" />
+          Branch
+        </h4>
+        <div className="flex items-center gap-2 mb-3">
+          <select
+            value={currentBranch}
+            onChange={e => setCurrentBranch(e.target.value)}
+            className="flex-1 text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
+          >
+            {branches.length === 0
+              ? <option value={currentBranch}>{currentBranch}</option>
+              : branches.map(b => <option key={b} value={b}>{b}</option>)
+            }
+          </select>
+          <button
+            onClick={() => setShowCreateBranch(v => !v)}
+            className="px-3 py-2 text-sm border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors whitespace-nowrap"
+          >
+            + New Branch
+          </button>
+        </div>
+        {showCreateBranch && (
+          <div className="flex gap-2 mt-2">
+            <input
+              type="text"
+              value={newBranchName}
+              onChange={e => setNewBranchName(e.target.value)}
+              className="flex-1 text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
+              placeholder="feature/my-branch"
+            />
+            <button
+              onClick={createBranchAPI}
+              disabled={!newBranchName.trim() || !!gitLoading}
+              className="px-3 py-2 bg-purple-600 text-white text-sm rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-40"
+            >
+              {gitLoading === 'Creating branch…' ? 'Creating…' : 'Create'}
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Commit & Push */}
+      <div className="bg-white border border-gray-200 rounded-xl p-5">
+        <h4 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
+          <GitCommit className="w-4 h-4 text-green-500" />
+          Commit &amp; Push
+        </h4>
+        {editedPaths.size === 0 ? (
+          <p className="text-sm text-gray-400 italic">No file changes to commit.</p>
+        ) : (
+          <div className="space-y-3">
+            <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-xs text-amber-700">
+              {editedPaths.size} file{editedPaths.size > 1 ? 's' : ''} modified
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">Commit message</label>
+              <input
+                type="text"
+                value={commitMsg}
+                onChange={e => setCommitMsg(e.target.value)}
+                className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                placeholder="Update module files"
+              />
+            </div>
+            <button
+              onClick={() => handleCommitAndPush().catch(() => {})}
+              disabled={!gitToken || !repoUrl || gitPushStatus === 'pushing'}
+              className="w-full px-4 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition-colors disabled:opacity-40 flex items-center justify-center gap-2"
+            >
+              <Upload className="w-4 h-4" />
+              {gitPushStatus === 'pushing' ? 'Pushing…' : `Push to ${currentBranch}`}
+            </button>
+          </div>
+        )}
+        {gitPushMsg && (
+          <div className={`mt-3 text-xs rounded-lg px-3 py-2 ${gitPushStatus === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : gitPushStatus === 'error' ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-gray-50 text-gray-600 border border-gray-200'}`}>
+            {gitPushMsg}
+          </div>
+        )}
+      </div>
+
+      {/* GitHub Actions Deploy */}
+      <div className="bg-white border border-gray-200 rounded-xl p-5">
+        <h4 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
+          <Play className="w-4 h-4 text-blue-500" />
+          GitHub Actions
+        </h4>
+        <div className="flex gap-2 mb-3">
+          <select
+            value={selectedWorkflow ?? ''}
+            onChange={e => setSelectedWorkflow(e.target.value ? Number(e.target.value) : null)}
+            className="flex-1 text-sm border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
+          >
+            <option value="">Select workflow…</option>
+            {workflows.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
+          </select>
+          <button
+            onClick={loadWorkflows}
+            disabled={!gitToken || !repoUrl || !!gitLoading}
+            className="px-3 py-2 text-sm border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors whitespace-nowrap disabled:opacity-40"
+          >
+            {gitLoading === 'Loading workflows…' ? 'Loading…' : 'Refresh'}
+          </button>
+        </div>
+        <button
+          onClick={handleTriggerDeploy}
+          disabled={!selectedWorkflow || deployStatus === 'triggering'}
+          className="w-full px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-40 flex items-center justify-center gap-2"
+        >
+          <Play className="w-4 h-4" />
+          {deployStatus === 'triggering' ? 'Triggering…' : 'Trigger Workflow'}
+        </button>
+        {deployMsg && (
+          <div className={`mt-3 text-xs rounded-lg px-3 py-2 ${deployStatus === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : deployStatus === 'error' ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-gray-50 text-gray-600 border border-gray-200'}`}>
+            {deployMsg}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
   const renderContent = () => {
     switch (activeTab) {
       case 'overview':      return renderOverview();
@@ -1210,6 +1376,7 @@ export default function ModuleDetailPage({ currentProject, setCurrentProject }: 
       case 'environment':   return renderEnvironment();
       case 'dependencies':  return renderDependencies();
       case 'advanced':      return renderAdvanced();
+      case 'git':           return renderGit();
       case 'files':         return null; // handled separately in layout
     }
   };
