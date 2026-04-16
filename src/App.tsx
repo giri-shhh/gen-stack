@@ -7,6 +7,7 @@ import AuthModal from './components/AuthModal';
 import GetStartedModal from './components/GetStartedModal';
 import EditorPage from './components/EditorPage';
 import ModuleDetailPage from './components/ModuleDetailPage';
+import SettingsPage from './components/SettingsPage';
 import type { User, Project } from './types';
 
 function App() {
@@ -93,6 +94,11 @@ function App() {
     navigate('/');
   };
 
+  const handleUpdateUser = (updated: User) => {
+    localStorage.setItem('user', JSON.stringify(updated));
+    setUser(updated);
+  };
+
   const handleOpenSignIn = () => {
     setAuthModalMode('signin');
     setAuthModalOpen(true);
@@ -168,6 +174,18 @@ function App() {
             currentProject={currentProject}
             setCurrentProject={setCurrentProject}
             onLogout={handleLogout}
+          />
+        ) : (
+          <Navigate to="/" />
+        )
+      } />
+
+      <Route path="/settings" element={
+        user ? (
+          <SettingsPage
+            user={user}
+            onLogout={handleLogout}
+            onUserUpdate={handleUpdateUser}
           />
         ) : (
           <Navigate to="/" />
