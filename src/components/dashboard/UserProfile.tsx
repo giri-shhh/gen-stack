@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Settings, LogOut, Bell, Sparkles, Zap, Search, Filter, X, Sun, Moon } from 'lucide-react';
 import type { User } from '../../types';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -16,6 +17,7 @@ const UserProfile: React.FC<UserProfileProps> = ({
   onSearch,
   searchPlaceholder = "Search projects, templates, and more..."
 }) => {
+  const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
   const [showNotifications, setShowNotifications] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -240,7 +242,10 @@ const UserProfile: React.FC<UserProfileProps> = ({
           {/* Dropdown Menu */}
           <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-[9999] backdrop-blur-sm">
             <div className="p-2">
-              <button className="w-full flex items-center space-x-2 px-3 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors">
+              <button
+                onClick={() => navigate('/settings')}
+                className="w-full flex items-center space-x-2 px-3 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md transition-colors"
+              >
                 <Settings className="w-4 h-4" />
                 <span>Settings</span>
               </button>
