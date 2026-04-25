@@ -31,16 +31,16 @@ const TechnologyInfo: React.FC<TechnologyInfoProps> = ({ component }) => {
   }
 
   return (
-    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-3 shadow-sm">
+    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-800 border border-blue-200 dark:border-gray-700 rounded-lg p-3 shadow-sm">
       <div className="flex items-center space-x-2 mb-3">
-        <div className="p-1 bg-blue-100 rounded">
-          <Info className="w-3 h-3 text-blue-600" />
+        <div className="p-1 bg-blue-100 dark:bg-blue-900/40 rounded">
+          <Info className="w-3 h-3 text-blue-600 dark:text-blue-400" />
         </div>
-        <h3 className="font-semibold text-gray-900 text-sm">Technology Information</h3>
+        <h3 className="font-semibold text-gray-900 dark:text-gray-100 text-sm">Technology Information</h3>
       </div>
-      
+
       {/* Compact Technology Header */}
-      <div className="bg-white/80 backdrop-blur-sm rounded-lg p-3 border border-blue-100">
+      <div className="bg-white/80 dark:bg-gray-700/80 backdrop-blur-sm rounded-lg p-3 border border-blue-100 dark:border-gray-600">
         <div className="flex items-center space-x-3">
           {tech.logo && (
             <div className="p-2 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg shadow-sm">
@@ -49,21 +49,21 @@ const TechnologyInfo: React.FC<TechnologyInfoProps> = ({ component }) => {
           )}
           <div className="flex-1 min-w-0">
             <div className="flex items-center space-x-2 mb-1">
-              <h4 className="font-bold text-gray-900 text-sm truncate">{tech.name}</h4>
-              <div className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-medium rounded-full flex-shrink-0">
+              <h4 className="font-bold text-gray-900 dark:text-gray-100 text-sm truncate">{tech.name}</h4>
+              <div className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 text-xs font-medium rounded-full flex-shrink-0">
                 {category || 'frontend'}
               </div>
             </div>
-            <p className="text-gray-600 text-xs leading-relaxed truncate">{tech.description}</p>
+            <p className="text-gray-600 dark:text-gray-400 text-xs leading-relaxed truncate">{tech.description}</p>
           </div>
         </div>
-        
+
         {/* Compact Details */}
-        <div className="flex items-center justify-between mt-2 pt-2 border-t border-blue-100">
+        <div className="flex items-center justify-between mt-2 pt-2 border-t border-blue-100 dark:border-gray-600">
           <div className="flex items-center space-x-1">
             <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
-            <span className="text-xs font-medium text-gray-600">ID:</span>
-            <span className="text-xs text-gray-900 font-mono">{tech.id}</span>
+            <span className="text-xs font-medium text-gray-600 dark:text-gray-400">ID:</span>
+            <span className="text-xs text-gray-900 dark:text-gray-100 font-mono">{tech.id}</span>
           </div>
         </div>
       </div>

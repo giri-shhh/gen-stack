@@ -27,11 +27,14 @@
   }
   
   .canvas-grid {
-    background-image: 
-      linear-gradient(rgba(0, 0, 0, 0.03) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(0, 0, 0, 0.03) 1px, transparent 1px);
-    background-size: 25px 25px;
-    background-color: #fafbfc;
+    background-image: radial-gradient(circle, rgba(0,0,0,0.22) 1px, transparent 1px);
+    background-size: 24px 24px;
+    background-color: #eceef4;
+  }
+
+  .dark .canvas-grid {
+    background-image: radial-gradient(circle, rgba(255,255,255,0.15) 1px, transparent 1px);
+    background-color: #111827;
   }
   
   .connection-line {
@@ -50,55 +53,37 @@
   }
   
   .tech-item {
-    @apply bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-all duration-200 cursor-move;
-    backdrop-filter: blur(10px);
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.9));
+    @apply bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm transition-all duration-150 cursor-move;
+    border-radius: 12px;
     will-change: transform;
   }
-  
+
   .tech-item:hover {
-    @apply border-blue-300 transform scale-105;
-    background: linear-gradient(135deg, rgba(59, 130, 246, 0.05), rgba(59, 130, 246, 0.1));
+    @apply border-gray-300 dark:border-gray-600;
   }
-  
+
   .tech-item:active {
-    @apply transform scale-95;
+    @apply scale-95;
   }
   
   .canvas-component {
-    @apply absolute bg-white border border-gray-200 rounded-lg p-4 shadow-md cursor-pointer;
+    @apply absolute border cursor-pointer;
+    border-radius: 16px;
     min-width: 140px;
     min-height: 100px;
     user-select: none;
-    backdrop-filter: blur(10px);
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.9));
     will-change: transform;
-    transform: translateZ(0); /* Force hardware acceleration */
-    /* Performance optimizations for smoother dragging */
+    transform: translateZ(0);
     contain: layout style paint;
     backface-visibility: hidden;
-    perspective: 1000px;
-    /* Optimize for GPU acceleration */
-    transform-style: preserve-3d;
   }
-  
-  .canvas-component.selected {
-    @apply border-blue-500 shadow-lg;
-    background: linear-gradient(135deg, rgba(59, 130, 246, 0.05), rgba(59, 130, 246, 0.1));
-  }
-  
+
   .canvas-component:hover {
-    @apply border-blue-400 shadow-lg;
-    transform: translateY(-2px) translateZ(0);
+    @apply border-gray-300;
   }
-  
-  .canvas-component:active {
-    @apply transform scale-95;
-  }
-  
+
   .canvas-component.resizing {
-    @apply border-blue-600 shadow-xl;
-    background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(59, 130, 246, 0.15));
+    @apply border-violet-400;
   }
   
   /* Enhanced drag states - optimized for performance */

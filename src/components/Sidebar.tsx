@@ -43,45 +43,49 @@ const DraggableTechItem: React.FC<DraggableTechItemProps> = ({ tech, searchQuery
       style={style}
       {...listeners}
       {...attributes}
-      className={`tech-item group transition-all duration-200 rounded-lg hover:bg-gray-50 cursor-move ${
-        isDragging ? 'scale-105 shadow-xl rotate-2 z-50' : 'hover:scale-[1.02]'
-      } ${searchQuery ? 'ring-1 ring-blue-200 bg-blue-50' : ''}`}
+      className={`tech-item group relative transition-all duration-150 rounded-xl cursor-move overflow-hidden ${
+        isDragging ? 'scale-105 shadow-2xl rotate-1 z-50 opacity-90' : 'hover:shadow-md'
+      } ${searchQuery ? 'ring-1 ring-blue-200' : ''}`}
     >
-      <div className="flex items-center space-x-2 p-2">
-        {/* Logo/Icon */}
-        {tech.logo ? (
-          <tech.logo className="w-4 h-4 text-blue-500 flex-shrink-0" />
-        ) : (
-          <div 
-            className={`w-3 h-3 rounded-full flex-shrink-0 transition-transform ${
-              isDragging ? 'scale-125' : 'group-hover:scale-110'
-            }`}
-            style={{ backgroundColor: tech.color }}
-          />
-        )}
+      {/* Left color accent */}
+      <div
+        className="absolute left-0 top-0 bottom-0 w-[3px] rounded-l-xl flex-shrink-0"
+        style={{ backgroundColor: tech.color }}
+      />
+
+      <div className="flex items-center gap-2.5 px-3 py-2 pl-4">
+        {/* Icon container */}
+        <div
+          className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 transition-transform duration-150 group-hover:scale-105"
+          style={{ backgroundColor: `${tech.color}18`, border: `1px solid ${tech.color}30`, color: tech.color }}
+        >
+          {tech.logo ? (
+            <tech.logo className="w-4 h-4" />
+          ) : (
+            <span className="text-xs font-bold leading-none" style={{ color: tech.color }}>
+              {tech.name.charAt(0)}
+            </span>
+          )}
+        </div>
+
         <div className="flex-1 min-w-0">
-          <div className="font-medium text-gray-900 truncate text-xs">
+          <div className="font-semibold text-gray-800 dark:text-gray-100 truncate text-xs leading-tight">
             {highlightText(tech.name, searchQuery)}
           </div>
-          <div className="text-xs text-gray-500 truncate">
+          <div className="text-[10px] text-gray-400 dark:text-gray-500 truncate leading-tight mt-0.5">
             {highlightText(tech.description, searchQuery)}
           </div>
         </div>
-        <div className={`transition-all duration-200 ${
-          isDragging ? 'opacity-100 scale-110' : 'opacity-0 group-hover:opacity-100'
+
+        {/* Drag grip indicator */}
+        <div className={`flex flex-col gap-0.5 flex-shrink-0 transition-opacity ${
+          isDragging ? 'opacity-100' : 'opacity-0 group-hover:opacity-40'
         }`}>
-          <div className="w-1.5 h-1.5 bg-gray-400 rounded-full"></div>
+          <div className="w-3 h-px bg-gray-400 rounded" />
+          <div className="w-3 h-px bg-gray-400 rounded" />
+          <div className="w-3 h-px bg-gray-400 rounded" />
         </div>
       </div>
-      
-      {/* Drag indicator */}
-      {isDragging && (
-        <div className="absolute inset-0 bg-blue-100 bg-opacity-70 rounded-lg border-2 border-dashed border-blue-400 pointer-events-none">
-          <div className="flex items-center justify-center h-full">
-            <div className="text-blue-700 text-xs font-medium">Dragging...</div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
@@ -338,7 +342,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentProject, onProjectUpdate }) =>
     };
 
     return (
-      <div className="mb-6 bg-gradient-to-br from-indigo-50 via-blue-50 to-cyan-50 rounded-2xl border border-indigo-200 shadow-lg overflow-hidden">
+      <div className="mb-6 bg-gradient-to-br from-indigo-50 via-blue-50 to-cyan-50 dark:from-gray-800 dark:via-gray-800 dark:to-gray-800 rounded-2xl border border-indigo-200 dark:border-gray-700 shadow-lg overflow-hidden">
         {/* Header with gradient background */}
         <div className="bg-gradient-to-r from-indigo-600 to-blue-600 p-4 text-white">
           <div className="flex items-center justify-between mb-2">
@@ -401,21 +405,21 @@ const Sidebar: React.FC<SidebarProps> = ({ currentProject, onProjectUpdate }) =>
         <div className="p-4">
           {/* Always visible quick info */}
           <div className="grid grid-cols-2 gap-3 mb-4">
-            <div className="bg-white/70 backdrop-blur-sm rounded-xl p-3 border border-white/50">
+            <div className="bg-white/70 dark:bg-gray-700/70 backdrop-blur-sm rounded-xl p-3 border border-white/50 dark:border-gray-600/50">
               <div className="flex items-center space-x-2 mb-1">
-                <Layers className="w-4 h-4 text-indigo-600" />
-                <span className="text-xs font-semibold text-gray-700">Technologies</span>
+                <Layers className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">Technologies</span>
               </div>
-              <div className="text-lg font-bold text-indigo-600">
+              <div className="text-lg font-bold text-indigo-600 dark:text-indigo-400">
                 {currentProject.technologies?.length || 0}
               </div>
             </div>
-            <div className="bg-white/70 backdrop-blur-sm rounded-xl p-3 border border-white/50">
+            <div className="bg-white/70 dark:bg-gray-700/70 backdrop-blur-sm rounded-xl p-3 border border-white/50 dark:border-gray-600/50">
               <div className="flex items-center space-x-2 mb-1">
-                <Activity className="w-4 h-4 text-blue-600" />
-                <span className="text-xs font-semibold text-gray-700">Components</span>
+                <Activity className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">Components</span>
               </div>
-              <div className="text-lg font-bold text-blue-600">
+              <div className="text-lg font-bold text-blue-600 dark:text-blue-400">
                 {currentProject.components || 0}
               </div>
             </div>
@@ -423,24 +427,24 @@ const Sidebar: React.FC<SidebarProps> = ({ currentProject, onProjectUpdate }) =>
 
           {/* Expandable Details */}
           {showProjectEdit && (
-            <div className="space-y-4 pt-4 border-t border-indigo-200">
+            <div className="space-y-4 pt-4 border-t border-indigo-200 dark:border-gray-600">
               {/* Project Description */}
-              <div className="bg-white/70 backdrop-blur-sm rounded-xl p-3 border border-white/50">
+              <div className="bg-white/70 dark:bg-gray-700/70 backdrop-blur-sm rounded-xl p-3 border border-white/50 dark:border-gray-600/50">
                 <div className="flex items-center space-x-2 mb-2">
-                  <Settings className="w-4 h-4 text-gray-600" />
-                  <span className="text-xs font-semibold text-gray-700">Description</span>
+                  <Settings className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+                  <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">Description</span>
                 </div>
                 {editingProject ? (
                   <textarea
                     value={currentProject.description || ''}
                     onChange={(e) => onProjectUpdate?.({ description: e.target.value })}
-                    className="w-full text-sm bg-white border border-indigo-200 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 resize-none"
+                    className="w-full text-sm bg-white dark:bg-gray-800 border border-indigo-200 dark:border-gray-600 rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 resize-none text-gray-900 dark:text-gray-100"
                     rows={3}
                     placeholder="Add project description..."
                     onBlur={handleProjectSave}
                   />
                 ) : (
-                  <p className="text-sm text-gray-600 leading-relaxed">
+                  <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
                     {currentProject.description || 'No description available'}
                   </p>
                 )}
@@ -449,38 +453,38 @@ const Sidebar: React.FC<SidebarProps> = ({ currentProject, onProjectUpdate }) =>
               {/* Additional Project Info */}
               <div className="grid grid-cols-1 gap-3">
                 {currentProject.author && (
-                  <div className="bg-white/70 backdrop-blur-sm rounded-xl p-3 border border-white/50">
+                  <div className="bg-white/70 dark:bg-gray-700/70 backdrop-blur-sm rounded-xl p-3 border border-white/50 dark:border-gray-600/50">
                     <div className="flex items-center space-x-2 mb-1">
-                      <User className="w-4 h-4 text-gray-600" />
-                      <span className="text-xs font-semibold text-gray-700">Author</span>
+                      <User className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+                      <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">Author</span>
                     </div>
-                    <p className="text-sm text-gray-800 font-medium">{currentProject.author}</p>
+                    <p className="text-sm text-gray-800 dark:text-gray-200 font-medium">{currentProject.author}</p>
                   </div>
                 )}
-                
+
                 {currentProject.version && (
-                  <div className="bg-white/70 backdrop-blur-sm rounded-xl p-3 border border-white/50">
+                  <div className="bg-white/70 dark:bg-gray-700/70 backdrop-blur-sm rounded-xl p-3 border border-white/50 dark:border-gray-600/50">
                     <div className="flex items-center space-x-2 mb-1">
-                      <Tag className="w-4 h-4 text-gray-600" />
-                      <span className="text-xs font-semibold text-gray-700">Version</span>
+                      <Tag className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+                      <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">Version</span>
                     </div>
-                    <p className="text-sm text-gray-800 font-medium">{currentProject.version}</p>
+                    <p className="text-sm text-gray-800 dark:text-gray-200 font-medium">{currentProject.version}</p>
                   </div>
                 )}
               </div>
 
               {/* Tags */}
               {currentProject.tags && currentProject.tags.length > 0 && (
-                <div className="bg-white/70 backdrop-blur-sm rounded-xl p-3 border border-white/50">
+                <div className="bg-white/70 dark:bg-gray-700/70 backdrop-blur-sm rounded-xl p-3 border border-white/50 dark:border-gray-600/50">
                   <div className="flex items-center space-x-2 mb-2">
-                    <Tag className="w-4 h-4 text-gray-600" />
-                    <span className="text-xs font-semibold text-gray-700">Tags</span>
+                    <Tag className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+                    <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">Tags</span>
                   </div>
                   <div className="flex flex-wrap gap-1">
                     {currentProject.tags.map((tag, index) => (
-                      <span 
+                      <span
                         key={index}
-                        className="px-2 py-1 bg-indigo-100 text-indigo-700 text-xs font-medium rounded-md border border-indigo-200"
+                        className="px-2 py-1 bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 text-xs font-medium rounded-md border border-indigo-200 dark:border-indigo-700"
                       >
                         {tag}
                       </span>
@@ -494,7 +498,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentProject, onProjectUpdate }) =>
           {/* Toggle Button */}
           <button
             onClick={() => setShowProjectEdit(!showProjectEdit)}
-            className="w-full mt-3 py-2 bg-gradient-to-r from-indigo-100 to-blue-100 hover:from-indigo-200 hover:to-blue-200 text-indigo-700 font-medium text-sm rounded-xl border border-indigo-200 transition-all duration-200 flex items-center justify-center space-x-2"
+            className="w-full mt-3 py-2 bg-gradient-to-r from-indigo-100 to-blue-100 dark:from-gray-700 dark:to-gray-700 hover:from-indigo-200 hover:to-blue-200 dark:hover:from-gray-600 dark:hover:to-gray-600 text-indigo-700 dark:text-indigo-300 font-medium text-sm rounded-xl border border-indigo-200 dark:border-gray-600 transition-all duration-200 flex items-center justify-center space-x-2"
           >
             <span>{showProjectEdit ? 'Show Less' : 'Show More'}</span>
             <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${showProjectEdit ? 'rotate-180' : ''}`} />
@@ -525,21 +529,21 @@ const Sidebar: React.FC<SidebarProps> = ({ currentProject, onProjectUpdate }) =>
       {/* Merged Search and Components */}
       <div className="space-y-4">
         {/* Compact Search */}
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
+        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
           <div className="p-3">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 dark:text-gray-500" />
               <input
                 type="text"
                 placeholder="Search components..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-8 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                className="w-full pl-10 pr-8 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
               />
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery('')}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -551,26 +555,26 @@ const Sidebar: React.FC<SidebarProps> = ({ currentProject, onProjectUpdate }) =>
         {/* Components List */}
         <div className="space-y-4">
           {limitedResults.map(({ categoryKey, category, items }) => (
-            <div 
-              key={categoryKey} 
-              className="bg-white rounded-xl border border-gray-200 shadow-sm"
+            <div
+              key={categoryKey}
+              className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm"
               onMouseEnter={() => setHoveredCategory(categoryKey)}
               onMouseLeave={() => setHoveredCategory(null)}
             >
-              <div className={`p-3 border-b border-gray-100 transition-all duration-200 ${
-                hoveredCategory === categoryKey ? 'bg-blue-50' : ''
+              <div className={`p-3 border-b border-gray-100 dark:border-gray-700 transition-all duration-200 ${
+                hoveredCategory === categoryKey ? 'bg-blue-50 dark:bg-blue-900/20' : ''
               }`}>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
                     <span className="text-base">{category.icon}</span>
-                    <span className="font-semibold text-gray-800 text-sm">{category.name}</span>
+                    <span className="font-semibold text-gray-800 dark:text-gray-100 text-sm">{category.name}</span>
                     {searchQuery && (
-                      <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">
+                      <span className="text-xs bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded-full">
                         {items.length}{searchQuery && items.length === 3 ? '+' : ''}
                       </span>
                     )}
                   </div>
-                  <div className="text-xs text-gray-500">
+                  <div className="text-xs text-gray-500 dark:text-gray-400">
                     {!searchQuery ? `${items.length} items` : `${items.length} matches`}
                   </div>
                 </div>
@@ -585,17 +589,17 @@ const Sidebar: React.FC<SidebarProps> = ({ currentProject, onProjectUpdate }) =>
           
           {/* No Results Message */}
           {searchQuery && limitedResults.length === 0 && (
-            <div className="text-center py-8 bg-white rounded-xl border border-gray-200">
-              <div className="text-gray-400 mb-2">
+            <div className="text-center py-8 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
+              <div className="text-gray-400 dark:text-gray-500 mb-2">
                 <Search className="w-12 h-12 mx-auto" />
               </div>
-              <h3 className="text-gray-600 font-medium mb-1">No technologies found</h3>
-              <p className="text-sm text-gray-500">
+              <h3 className="text-gray-600 dark:text-gray-300 font-medium mb-1">No technologies found</h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
                 Try searching with different keywords or browse all categories
               </p>
               <button
                 onClick={() => setSearchQuery('')}
-                className="mt-3 text-sm text-blue-600 hover:text-blue-700 font-medium transition-colors"
+                className="mt-3 text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium transition-colors"
               >
                 Clear search
               </button>

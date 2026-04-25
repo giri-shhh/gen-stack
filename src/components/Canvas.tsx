@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { useDroppable } from '@dnd-kit/core';
+import { ZoomIn, ZoomOut, Maximize2, Info } from 'lucide-react';
 import CanvasComponent from './CanvasComponent';
 import ConnectionLines from './ConnectionLines';
 import ConnectionTypeModal from './ConnectionTypeModal';
@@ -232,7 +233,7 @@ const Canvas: React.FC<CanvasProps> = React.memo(({
     }
     
     return `h-full w-full relative canvas-grid overflow-hidden transition-colors duration-200 ${
-      isOver && draggedTech ? 'bg-blue-50' : ''
+      isOver && draggedTech ? 'bg-blue-50 dark:bg-blue-900/20' : ''
     } ${cursor}`;
   }, [isOver, draggedTech, isPanning, isConnecting]);
 
@@ -256,50 +257,56 @@ const Canvas: React.FC<CanvasProps> = React.memo(({
       onMouseDown={handleMouseDown}
       onMouseUp={handleMouseUp}
     >
-      {/* Bottom-left controls and navigation note */}
-      <div className="absolute bottom-4 left-4 z-50 flex flex-row items-end space-x-4" data-canvas-ui="true">
-        {/* Zoom Controls */}
-        <div className="flex flex-col space-y-2">
-          <div className="bg-white bg-opacity-95 backdrop-blur-sm rounded-lg shadow-lg border border-gray-200 p-2">
-            <div className="flex flex-col space-y-1">
-              <button
-                onClick={zoomIn}
-                className="w-8 h-8 flex items-center justify-center bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
-                title="Zoom In (Ctrl/Cmd + Scroll)"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                </svg>
-              </button>
-              <button
-                onClick={zoomOut}
-                className="w-8 h-8 flex items-center justify-center bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
-                title="Zoom Out (Ctrl/Cmd + Scroll)"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
-                </svg>
-              </button>
-              <button
-                onClick={resetZoom}
-                className="w-8 h-8 flex items-center justify-center bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors text-xs font-medium"
-                title="Reset View"
-              >
-                {Math.round(zoom * 100)}%
-              </button>
-            </div>
-          </div>
+      {/* Bottom-left controls */}
+      <div className="absolute bottom-5 left-5 z-50 flex flex-row items-center gap-2" data-canvas-ui="true">
+        {/* Zoom pill */}
+        <div className="flex items-center bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm rounded-full shadow-lg border border-gray-200/80 dark:border-gray-700/80 px-1 py-1 gap-0.5">
+          <button
+            onClick={zoomOut}
+            className="w-7 h-7 flex items-center justify-center rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-800 dark:hover:text-gray-200 transition-all"
+            title="Zoom Out"
+          >
+            <ZoomOut className="w-3.5 h-3.5" />
+          </button>
+          <button
+            onClick={resetZoom}
+            className="px-2.5 h-7 flex items-center justify-center rounded-full text-xs font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-100 transition-all min-w-[44px]"
+            title="Reset View"
+          >
+            {Math.round(zoom * 100)}%
+          </button>
+          <button
+            onClick={zoomIn}
+            className="w-7 h-7 flex items-center justify-center rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-800 dark:hover:text-gray-200 transition-all"
+            title="Zoom In"
+          >
+            <ZoomIn className="w-3.5 h-3.5" />
+          </button>
+          <div className="w-px h-4 bg-gray-200 dark:bg-gray-600 mx-0.5" />
+          <button
+            onClick={resetZoom}
+            className="w-7 h-7 flex items-center justify-center rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-800 dark:hover:text-gray-200 transition-all"
+            title="Fit to screen"
+          >
+            <Maximize2 className="w-3.5 h-3.5" />
+          </button>
         </div>
-        {/* Navigation Note */}
-        <div className="bg-white bg-opacity-90 backdrop-blur-sm rounded-lg shadow-lg border border-gray-200 px-3 py-2">
-          <div className="text-xs text-gray-600">
-            <div className="font-medium mb-1">Navigation:</div>
-            <div>• Ctrl/Cmd + Scroll to zoom</div>
-            <div>• Drag empty areas to pan</div>
-            <div>• Click to select components</div>
-            <div>• Drag selected components to move</div>
-            <div>• Alt + Drag to force pan</div>
-            <div>• Middle mouse to pan</div>
+
+        {/* Nav tips — hoverable info pill */}
+        <div className="group relative">
+          <button className="w-7 h-7 flex items-center justify-center rounded-full bg-white/95 dark:bg-gray-800/95 backdrop-blur-sm shadow-lg border border-gray-200/80 dark:border-gray-700/80 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all">
+            <Info className="w-3.5 h-3.5" />
+          </button>
+          <div className="absolute bottom-9 left-0 hidden group-hover:block w-52 bg-gray-900/95 backdrop-blur-sm text-white text-[11px] rounded-xl shadow-xl px-3 py-2.5 leading-relaxed pointer-events-none">
+            <div className="font-semibold mb-1.5 text-gray-200">Navigation</div>
+            <div className="space-y-0.5 text-gray-400">
+              <div>⌃/⌘ + Scroll · zoom</div>
+              <div>Drag canvas · pan</div>
+              <div>Alt + Drag · force pan</div>
+              <div>Middle mouse · pan</div>
+              <div>Click · select</div>
+              <div>↗ button · open module</div>
+            </div>
           </div>
         </div>
       </div>
@@ -377,9 +384,16 @@ const Canvas: React.FC<CanvasProps> = React.memo(({
         {/* Drop Zone Instructions - Only show when dragging new tech items from sidebar */}
         {isOver && draggedTech && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <div className="bg-white bg-opacity-90 border-2 border-dashed border-blue-400 rounded-lg p-8 text-center">
-              <div className="text-blue-600 text-lg font-medium mb-2">Drop to add component</div>
-              <div className="text-gray-600 text-sm">Release to place the component on the canvas</div>
+            <div className="flex flex-col items-center gap-3 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm border-2 border-dashed border-indigo-400 dark:border-indigo-500 rounded-2xl px-10 py-8 text-center shadow-xl">
+              <div className="w-12 h-12 rounded-2xl bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center">
+                <svg className="w-6 h-6 text-indigo-500 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+              </div>
+              <div>
+                <div className="text-indigo-700 dark:text-indigo-300 text-sm font-bold">Drop to place</div>
+                <div className="text-gray-500 dark:text-gray-400 text-xs mt-0.5">Release to add to canvas</div>
+              </div>
             </div>
           </div>
         )}
@@ -387,13 +401,39 @@ const Canvas: React.FC<CanvasProps> = React.memo(({
         {/* Empty Canvas Instructions */}
         {components.length === 0 && !isOver && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <div className="bg-white bg-opacity-95 border-2 border-dashed border-gray-300 rounded-lg p-12 text-center max-w-md">
-              <div className="text-gray-600 text-lg font-medium mb-4">Welcome to Fullstack Gen</div>
-              <div className="text-gray-500 text-sm space-y-2">
-                <p>🎯 <strong>Get Started:</strong> Drag components from the left sidebar to build your architecture</p>
-                <p>🔗 <strong>Connect:</strong> Click the link icon on components to create connections</p>
-                <p>⚙️ <strong>Configure:</strong> Select any component to view and edit its properties</p>
-                <p>📦 <strong>Generate:</strong> Use the properties panel to generate your project code</p>
+            <div className="flex flex-col items-center gap-5 text-center max-w-sm px-6">
+              {/* Icon cluster */}
+              <div className="relative w-20 h-20">
+                <div className="absolute inset-0 rounded-3xl bg-indigo-100 dark:bg-indigo-900/40 opacity-60" />
+                <div className="absolute inset-3 rounded-2xl bg-indigo-200 dark:bg-indigo-800/40 opacity-50" />
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <svg className="w-9 h-9 text-indigo-400 dark:text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
+                      d="M4 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM14 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1v-4zM14 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
+                  </svg>
+                </div>
+              </div>
+
+              <div>
+                <h3 className="text-base font-bold text-gray-600 dark:text-gray-300 mb-1">Start building your architecture</h3>
+                <p className="text-sm text-gray-400 dark:text-gray-500">Drag components from the sidebar onto the canvas</p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 w-full text-left">
+                {[
+                  { icon: '⬡', label: 'Drag', desc: 'from sidebar to place' },
+                  { icon: '⟶', label: 'Connect', desc: 'click link icon to wire' },
+                  { icon: '⚙', label: 'Configure', desc: 'select to edit properties' },
+                  { icon: '↗', label: 'Open', desc: 'click ↗ button on node' },
+                ].map(({ icon, label, desc }) => (
+                  <div key={label} className="flex items-start gap-2 bg-white/70 dark:bg-gray-800/70 rounded-xl px-3 py-2.5 border border-gray-200/60 dark:border-gray-700/60">
+                    <span className="text-base leading-none mt-0.5 text-indigo-400 dark:text-indigo-400">{icon}</span>
+                    <div>
+                      <div className="text-xs font-semibold text-gray-600 dark:text-gray-300">{label}</div>
+                      <div className="text-[10px] text-gray-400 dark:text-gray-500">{desc}</div>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           </div>

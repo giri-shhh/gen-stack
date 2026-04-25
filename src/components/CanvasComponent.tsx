@@ -1,8 +1,18 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { useDraggable } from '@dnd-kit/core';
-import { X, Link, Maximize2, Package } from 'lucide-react';
-import { getTechById } from '../data/techStack';
+import { X, Link, Maximize2, Package, ExternalLink } from 'lucide-react';
+import { getTechById, getCategoryByTechId } from '../data/techStack';
 import type { CanvasComponentProps } from '../types';
+
+const CATEGORY_LABELS: Record<string, string> = {
+  frontend: 'Frontend',
+  backend: 'Backend',
+  database: 'Database',
+  cloud: 'Cloud',
+  messaging: 'Messaging',
+  caching: 'Caching',
+  additional: 'DevOps',
+};
 
 const CanvasComponent: React.FC<CanvasComponentProps> = React.memo(({
   component,
@@ -23,9 +33,6 @@ const CanvasComponent: React.FC<CanvasComponentProps> = React.memo(({
   const [resizeStartSize, setResizeStartSize] = useState<{ width: number; height: number } | null>(null);
   const [justPlaced, setJustPlaced] = useState(false);
 
-  // Refs for click detection — avoids extra re-renders
-  const clickCountRef = useRef(0);
-  const clickTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const prevIsDraggingRef = useRef(false);
 
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
@@ -34,7 +41,6 @@ const CanvasComponent: React.FC<CanvasComponentProps> = React.memo(({
     disabled: !isSelected || isResizing,
   });
 
-  // Briefly highlight the card after a drag ends
   useEffect(() => {
     if (prevIsDraggingRef.current && !isDragging) {
       setJustPlaced(true);
@@ -44,27 +50,35 @@ const CanvasComponent: React.FC<CanvasComponentProps> = React.memo(({
     prevIsDraggingRef.current = isDragging;
   }, [isDragging]);
 
-  useEffect(() => {
-    return () => { if (clickTimeoutRef.current) clearTimeout(clickTimeoutRef.current); };
-  }, []);
-
   const tech = useMemo(() => getTechById(component.techId), [component.techId]);
   const selectedLibraries = component.selectedLibraries || [];
   const techColor = tech?.color || '#6366f1';
 
+  const categoryKey = useMemo(() => getCategoryByTechId(component.techId), [component.techId]);
+  const categoryLabel = categoryKey ? (CATEGORY_LABELS[categoryKey] ?? null) : null;
+
   // ── Style ─────────────────────────────────────────────────────────────────
-  // Canvas container applies zoom+pan; components use plain canvas-space coords.
-  // During drag, translate by (dnd-kit delta / zoom) to track cursor exactly.
   const style = useMemo(() => {
     if (!component.position || !component.size) {
       return { left: 0, top: 0, width: 200, height: 140 };
     }
+
+    const shadowStyle = isConnectionStart
+      ? `0 0 0 2px #34d399, 0 4px 20px rgba(52,211,153,0.25)`
+      : justPlaced
+      ? '0 0 0 2px #facc15, 0 8px 20px rgba(250,204,21,0.2)'
+      : isSelected
+      ? `0 0 0 2px ${techColor}, 0 8px 28px ${techColor}30, 0 2px 8px rgba(0,0,0,0.08)`
+      : isDragging
+      ? '0 12px 40px rgba(0,0,0,0.2), 0 2px 8px rgba(0,0,0,0.12)'
+      : '0 1px 3px rgba(0,0,0,0.06), 0 2px 10px rgba(0,0,0,0.05)';
 
     const base = {
       left: component.position.x,
       top: component.position.y,
       width: component.size.width,
       height: component.size.height,
+      boxShadow: shadowStyle,
     };
 
     if (transform && isDragging) {
@@ -76,38 +90,37 @@ const CanvasComponent: React.FC<CanvasComponentProps> = React.memo(({
       };
     }
     return base;
-  }, [component.position.x, component.position.y, component.size.width, component.size.height, transform, zoom, isDragging]);
+  }, [
+    component.position.x, component.position.y,
+    component.size.width, component.size.height,
+    transform, zoom, isDragging,
+    isSelected, isConnectionStart, justPlaced, techColor,
+  ]);
 
   // ── Class name ────────────────────────────────────────────────────────────
   const className = useMemo(() => {
     const base = [
-      'canvas-component absolute flex flex-col overflow-hidden rounded-xl',
-      'bg-white border transition-shadow duration-150',
+      'canvas-component absolute flex flex-col overflow-hidden rounded-2xl',
+      'bg-white dark:bg-gray-800 border transition-all duration-150',
     ];
 
-    // Cursor
     base.push(isDragging ? 'cursor-grabbing' : isSelected ? 'cursor-grab' : 'cursor-pointer');
+    base.push(isDragging ? 'z-50 opacity-95' : isSelected ? 'z-20' : 'z-10');
 
-    // Shadow
-    base.push(isDragging ? 'shadow-2xl z-50' : isSelected ? 'shadow-lg z-20' : 'shadow-md hover:shadow-lg z-10');
-
-    // Ring / border state
-    if (justPlaced) {
-      base.push('ring-2 ring-yellow-400 border-yellow-300');
+    if (isResizing) {
+      base.push('border-violet-400');
     } else if (isConnectionStart) {
-      base.push('ring-2 ring-emerald-400 border-emerald-300');
+      base.push('border-emerald-400');
     } else if (isConnecting && !isSelected) {
-      base.push('ring-2 ring-indigo-300 border-indigo-200');
+      base.push('border-indigo-300');
     } else if (isSelected) {
-      base.push('ring-2 ring-indigo-400/60 border-indigo-300');
+      base.push('border-transparent');
     } else {
-      base.push('border-gray-200/80');
+      base.push('border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600');
     }
 
-    if (isResizing) base.push('ring-2 ring-violet-400 border-violet-300');
-
     return base.join(' ');
-  }, [isSelected, isConnectionStart, isConnecting, isDragging, isResizing, justPlaced]);
+  }, [isSelected, isConnectionStart, isConnecting, isDragging, isResizing]);
 
   // ── Resize handlers ───────────────────────────────────────────────────────
   const handleMouseMove = useCallback((e: MouseEvent) => {
@@ -173,17 +186,7 @@ const CanvasComponent: React.FC<CanvasComponentProps> = React.memo(({
     e.stopPropagation();
     if (isDragging || isResizing) return;
     onSelect();
-    clickCountRef.current += 1;
-    if (clickCountRef.current === 1) {
-      if (clickTimeoutRef.current) clearTimeout(clickTimeoutRef.current);
-      clickTimeoutRef.current = setTimeout(() => { clickCountRef.current = 0; }, 300);
-    } else if (clickCountRef.current >= 2) {
-      if (clickTimeoutRef.current) clearTimeout(clickTimeoutRef.current);
-      clickTimeoutRef.current = null;
-      clickCountRef.current = 0;
-      onDoubleClick();
-    }
-  }, [isDragging, isResizing, onSelect, onDoubleClick]);
+  }, [isDragging, isResizing, onSelect]);
 
   const handleRemove = useCallback((e: React.MouseEvent) => {
     e.stopPropagation(); onRemove();
@@ -199,99 +202,114 @@ const CanvasComponent: React.FC<CanvasComponentProps> = React.memo(({
       onMouseDown={handleMouseDown}
       data-canvas-component="true"
     >
-      {/* ── Colored accent strip (tech identity) ── */}
+      {/* ── Colored accent strip ── */}
       <div
-        className="flex-shrink-0 h-1 w-full"
-        style={{ backgroundColor: techColor }}
+        className="flex-shrink-0 w-full"
+        style={{ height: 3, backgroundColor: techColor }}
       />
 
-      {/* ── Header: name + controls ──────────────── */}
-      <div className="flex items-center justify-between px-3 pt-2 pb-1 min-h-0">
-        <span
-          className="text-xs font-semibold truncate leading-none"
-          style={{ color: isSelected ? techColor : '#374151', maxWidth: isSelected ? 'calc(100% - 56px)' : '100%' }}
+      {/* ── Action buttons (top-right overlay, visible when selected) ── */}
+      {isSelected && (
+        <div
+          className="absolute top-2 right-2 flex items-center gap-1"
+          style={{ zIndex: 50 }}
         >
-          {component.properties?.name || tech?.name || 'Component'}
-        </span>
+          <button
+            onClick={handleConnectionClick}
+            onMouseDown={(e) => { e.stopPropagation(); e.preventDefault(); }}
+            data-component-button="true"
+            title={isConnecting ? 'Connect to this' : 'Start connection'}
+            className={`w-6 h-6 flex items-center justify-center rounded-lg shadow-sm border transition-all ${
+              isConnecting
+                ? 'bg-indigo-500 text-white border-indigo-500'
+                : 'bg-white dark:bg-gray-700 text-indigo-500 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/40 border-indigo-200 dark:border-indigo-700'
+            }`}
+            style={{ pointerEvents: 'auto' }}
+          >
+            <Link className="w-3 h-3" />
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); onDoubleClick(); }}
+            onMouseDown={(e) => { e.stopPropagation(); e.preventDefault(); }}
+            data-component-button="true"
+            title="Open module detail"
+            className="w-6 h-6 flex items-center justify-center rounded-lg bg-white dark:bg-gray-700 text-blue-500 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/40 border border-blue-200 dark:border-blue-700 shadow-sm transition-all"
+            style={{ pointerEvents: 'auto' }}
+          >
+            <ExternalLink className="w-3 h-3" />
+          </button>
+          <button
+            onClick={handleRemove}
+            onMouseDown={(e) => { e.stopPropagation(); e.preventDefault(); }}
+            data-component-button="true"
+            title="Remove"
+            className="w-6 h-6 flex items-center justify-center rounded-lg bg-white dark:bg-gray-700 text-red-400 hover:bg-red-50 dark:hover:bg-red-900/40 border border-red-200 dark:border-red-800 shadow-sm transition-all"
+            style={{ pointerEvents: 'auto' }}
+          >
+            <X className="w-3 h-3" />
+          </button>
+        </div>
+      )}
 
-        {/* Action buttons — visible only when selected */}
-        {isSelected && (
-          <div className="flex items-center gap-1 flex-shrink-0 ml-1" style={{ zIndex: 50, position: 'relative' }}>
-            <button
-              onClick={handleConnectionClick}
-              onMouseDown={(e) => { e.stopPropagation(); e.preventDefault(); }}
-              data-component-button="true"
-              title={isConnecting ? 'Connect to this' : 'Start connection'}
-              className={`w-5 h-5 flex items-center justify-center rounded transition-colors ${
-                isConnecting
-                  ? 'bg-indigo-500 text-white'
-                  : 'bg-indigo-50 text-indigo-500 hover:bg-indigo-100 border border-indigo-200'
-              }`}
-              style={{ pointerEvents: 'auto' }}
-            >
-              <Link className="w-2.5 h-2.5" />
-            </button>
-            <button
-              onClick={handleRemove}
-              onMouseDown={(e) => { e.stopPropagation(); e.preventDefault(); }}
-              data-component-button="true"
-              title="Remove"
-              className="w-5 h-5 flex items-center justify-center rounded bg-red-50 text-red-400 hover:bg-red-100 border border-red-200 transition-colors"
-              style={{ pointerEvents: 'auto' }}
-            >
-              <X className="w-2.5 h-2.5" />
-            </button>
-          </div>
-        )}
-      </div>
-
-      {/* ── Main icon + label ─────────────────────── */}
-      <div className="flex-1 flex flex-col items-center justify-center px-3 pb-3 gap-2">
+      {/* ── Main content area ── */}
+      <div className="flex-1 flex flex-col items-center justify-center px-3 pt-3 pb-3 gap-2">
         {/* Tech icon */}
         <div
-          className={`rounded-xl flex items-center justify-center shadow-sm flex-shrink-0 transition-all duration-150 ${
-            isSelected ? 'shadow-md scale-105' : ''
+          className={`rounded-2xl flex items-center justify-center flex-shrink-0 transition-all duration-200 ${
+            isSelected ? 'scale-105' : ''
           }`}
           style={{
-            width: 48,
-            height: 48,
-            backgroundColor: techColor,
+            width: 52,
+            height: 52,
+            backgroundColor: `${techColor}18`,
+            border: `1.5px solid ${techColor}35`,
+            color: techColor,
           }}
         >
           {tech?.logo ? (
-            <tech.logo className="w-6 h-6 text-white" />
+            <tech.logo className="w-6 h-6" />
           ) : (
-            <span className="text-white text-lg font-bold leading-none">
+            <span
+              className="text-2xl font-black leading-none"
+              style={{ color: techColor }}
+            >
               {(component.properties?.name || tech?.name || 'C').charAt(0).toUpperCase()}
             </span>
           )}
         </div>
 
-        {/* Library badge (compact) */}
-        {selectedLibraries.length > 0 && (
-          <div
-            className="flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium"
-            style={{ backgroundColor: `${techColor}18`, color: techColor }}
-          >
-            <Package className="w-2.5 h-2.5" />
-            <span>{selectedLibraries.length} lib{selectedLibraries.length !== 1 ? 's' : ''}</span>
-          </div>
-        )}
+        {/* Tech name */}
+        <span className="text-xs font-bold text-gray-800 dark:text-gray-100 leading-tight text-center block w-full truncate px-1">
+          {component.properties?.name || tech?.name || 'Component'}
+        </span>
+
+        {/* Badges row: category + libraries */}
+        <div className="flex items-center justify-center gap-1.5 flex-wrap w-full">
+          {categoryLabel && (
+            <span
+              className="text-[10px] px-2 py-0.5 rounded-full font-semibold leading-none whitespace-nowrap"
+              style={{ backgroundColor: `${techColor}15`, color: techColor }}
+            >
+              {categoryLabel}
+            </span>
+          )}
+          {selectedLibraries.length > 0 && (
+            <span className="flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 font-medium leading-none">
+              <Package className="w-2.5 h-2.5" />
+              {selectedLibraries.length}
+            </span>
+          )}
+        </div>
 
         {/* View structure shortcut when selected + has libs */}
         {isSelected && selectedLibraries.length > 0 && onViewProjectStructure && (
           <button
             onClick={(e) => { e.stopPropagation(); onViewProjectStructure(); }}
-            className="text-xs text-indigo-500 hover:text-indigo-700 underline underline-offset-1 transition-colors"
+            className="text-[10px] text-indigo-500 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 underline underline-offset-1 transition-colors"
             style={{ pointerEvents: 'auto', zIndex: 50, position: 'relative' }}
           >
             view structure
           </button>
-        )}
-
-        {/* Subtle double-click hint when selected */}
-        {isSelected && !isDragging && (
-          <span className="text-xs text-gray-400 leading-none select-none">↗ dbl-click</span>
         )}
       </div>
 
@@ -300,35 +318,35 @@ const CanvasComponent: React.FC<CanvasComponentProps> = React.memo(({
         <div
           {...listeners}
           {...attributes}
-          className="absolute inset-0 rounded-xl cursor-grab active:cursor-grabbing"
+          className="absolute inset-0 rounded-2xl cursor-grab active:cursor-grabbing"
           style={{ zIndex: 20, backgroundColor: 'transparent', pointerEvents: 'auto' }}
           title="Drag to move"
         />
       )}
 
-      {/* ── Resize handle ──────────────────────────── */}
+      {/* ── Resize handle ── */}
       {isSelected && (
         <div
           className="resize-handle absolute bottom-0 right-0 w-5 h-5 z-30 cursor-se-resize flex items-end justify-end p-1"
           onMouseDown={handleMouseDown}
         >
-          <Maximize2 className="w-3 h-3 text-gray-400 hover:text-indigo-400 transition-colors" />
+          <Maximize2 className="w-3 h-3 text-gray-300 dark:text-gray-600 hover:text-indigo-400 transition-colors" />
         </div>
       )}
 
       {/* Size tooltip during resize */}
       {isResizing && (
-        <div className="absolute -top-7 left-1/2 -translate-x-1/2 bg-gray-800 text-white text-xs px-2 py-0.5 rounded z-50 whitespace-nowrap pointer-events-none">
+        <div className="absolute -top-7 left-1/2 -translate-x-1/2 bg-gray-900 text-white text-[10px] px-2 py-0.5 rounded-md z-50 whitespace-nowrap pointer-events-none font-medium">
           {component.size?.width || 200} × {component.size?.height || 140}
         </div>
       )}
 
       {/* Connection-state ring overlays */}
       {isConnectionStart && (
-        <div className="absolute inset-0 rounded-xl ring-2 ring-emerald-400 pointer-events-none" />
+        <div className="absolute inset-0 rounded-2xl ring-2 ring-emerald-400 pointer-events-none" />
       )}
       {isConnecting && !isSelected && !isConnectionStart && (
-        <div className="absolute inset-0 rounded-xl ring-1 ring-indigo-300 pointer-events-none" />
+        <div className="absolute inset-0 rounded-2xl ring-1 ring-indigo-300/70 pointer-events-none" />
       )}
 
       {/* Snap guides during drag/resize */}
